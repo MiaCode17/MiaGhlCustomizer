@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { authRouter } from './auth/routes';
 import { bannersRouter } from './banners/routes';
 import { bookACallRouter } from './book-a-call/routes';
 import { buttonBuilderRouter } from './button-builder/routes';
@@ -18,6 +19,7 @@ import { uploadsRouter } from './uploads/routes';
 
 export const apiRouter: Router = Router();
 
+apiRouter.use('/auth', authRouter);
 apiRouter.use('/company', companyRouter);
 apiRouter.use('/uploads', uploadsRouter);
 apiRouter.use('/theme', themeRouter);

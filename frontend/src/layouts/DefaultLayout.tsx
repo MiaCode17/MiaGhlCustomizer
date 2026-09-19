@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Layout, Menu, Typography, Tag, Space } from 'antd';
+import { Layout, Menu, Typography, Tag, Space, Button } from 'antd';
 import type { MenuProps } from 'antd';
 import {
   BgColorsOutlined,
   GiftOutlined,
   PictureOutlined,
   LoginOutlined,
+  LogoutOutlined,
   AppstoreOutlined,
   LinkOutlined,
   MenuOutlined,
@@ -18,6 +19,7 @@ import {
 } from '@ant-design/icons';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useCompany } from '../context/CompanyContext';
+import { useSession } from '../context/SessionContext';
 
 const { Header, Sider, Content } = Layout;
 
@@ -87,8 +89,14 @@ const PLAN_COLORS: Record<string, string> = {
 
 export function DefaultLayout() {
   const { company } = useCompany();
+  const { user, logout } = useSession();
   const navigate = useNavigate();
   const location = useLocation();
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login', { replace: true });
+  };
   const current = findCurrentLeaf(location.pathname);
   const [openKeys, setOpenKeys] = useState<string[]>(() => {
     const parent = findParentKey(location.pathname);
@@ -188,17 +196,24 @@ export function DefaultLayout() {
               {current?.label ?? 'Customizer'}
             </Typography.Title>
           </Space>
-          {company && (
-            <Space size={10}>
-              <Typography.Text type="secondary">{company.name}</Typography.Text>
-              <Tag
-                color={PLAN_COLORS[company.plan]}
-                style={{ textTransform: 'capitalize', borderRadius: 999, padding: '2px 12px' }}
-              >
-                {company.plan}
-              </Tag>
-            </Space>
-          )}
+          <Space size={16}>
+            {company && (
+              <Space size={10}>
+                <Typography.Text type="secondary">{company.name}</Typography.Text>
+                <Tag
+                  color={PLAN_COLORS[company.plan]}
+                  style={{ textTransform: 'capitalize', borderRadius: 999, padding: '2px 12px' }}
+                >
+                  {company.plan}
+                </Tag>
+              </Space>
+            )}
+            {user && (
+              <Button icon={<LogoutOutlined />} onClick={handleLogout}>
+                Log out
+              </Button>
+            )}
+          </Space>
         </Header>
         <Content style={{ padding: '28px 32px' }}>
           <Outlet />

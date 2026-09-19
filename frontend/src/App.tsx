@@ -1,6 +1,7 @@
 import { ConfigProvider } from 'antd';
 import { useRoutes } from 'react-router-dom';
 import { CompanyProvider } from './context/CompanyContext';
+import { SessionProvider } from './context/SessionContext';
 import { routes } from './router/routes';
 
 function AppRoutes() {
@@ -64,9 +65,11 @@ export function App() {
         },
       }}
     >
-      <CompanyProvider>
-        <AppRoutes />
-      </CompanyProvider>
+      <SessionProvider>
+        <CompanyProvider>
+          <AppRoutes />
+        </CompanyProvider>
+      </SessionProvider>
     </ConfigProvider>
   );
 }

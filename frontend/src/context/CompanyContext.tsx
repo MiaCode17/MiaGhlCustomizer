@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { companyService } from '../services/companyService';
+import { useSession } from './SessionContext';
 import { Company, PlanTier } from '../types/company';
 
 interface CompanyContextValue {
@@ -11,15 +12,22 @@ interface CompanyContextValue {
 const CompanyContext = createContext<CompanyContextValue | undefined>(undefined);
 
 export function CompanyProvider({ children }: { children: React.ReactNode }) {
+  const { user } = useSession();
   const [company, setCompany] = useState<Company | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    if (!user) {
+      setCompany(null);
+      setIsLoading(false);
+      return;
+    }
+    setIsLoading(true);
     companyService
       .get()
       .then(setCompany)
       .finally(() => setIsLoading(false));
-  }, []);
+  }, [user]);
 
   const updateCompany = useCallback(async (input: { name: string; plan: PlanTier }) => {
     const updated = await companyService.update(input);

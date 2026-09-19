@@ -1,7 +1,10 @@
 import { lazy, Suspense } from 'react';
 import { Navigate, RouteObject } from 'react-router-dom';
 import { Spin } from 'antd';
+import { BlankLayout } from '../layouts/BlankLayout';
 import { DefaultLayout } from '../layouts/DefaultLayout';
+import { LoginPage } from '../pages/auth/LoginPage';
+import { RouteGuard } from './RouteGuard';
 
 const ReadyMadeThemesPage = lazy(() =>
   import('../pages/customizer/theme-builder/ReadyMadeThemesPage').then((m) => ({
@@ -102,7 +105,15 @@ function lazyPage(node: React.ReactNode) {
 
 export const routes: RouteObject[] = [
   {
-    element: <DefaultLayout />,
+    element: <BlankLayout />,
+    children: [{ path: '/login', element: lazyPage(<LoginPage />) }],
+  },
+  {
+    element: (
+      <RouteGuard>
+        <DefaultLayout />
+      </RouteGuard>
+    ),
     children: [
       { path: '/miaghlcustomizer/theme/ready-made', element: lazyPage(<ReadyMadeThemesPage />) },
       { path: '/miaghlcustomizer/theme/make-your-own', element: lazyPage(<MakeYourOwnThemePage />) },

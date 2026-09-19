@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
 import { Types } from 'mongoose';
-import { Company } from '../models/Company';
+import { AUTH_COOKIE_NAME, verifyAuthToken } from '../utils/jwt';
 import { HttpError } from './errorHandler';
 
 declare global {
@@ -8,30 +8,29 @@ declare global {
   namespace Express {
     interface Request {
       companyId?: Types.ObjectId;
+      userId?: Types.ObjectId;
     }
   }
 }
 
-const DEFAULT_COMPANY_NAME = 'My Agency';
-
-let defaultCompanyId: Types.ObjectId | null = null;
-
 /**
- * There are no user accounts in this app: every request acts on a single
- * seeded company. This finds or creates that company once at boot.
+ * Verifies the session cookie and attaches the authenticated user's
+ * companyId/userId to the request. Every route that touches company data
+ * uses this as its auth gate.
  */
-export async function ensureDefaultCompany(): Promise<void> {
-  let company = await Company.findOne();
-  if (!company) {
-    company = await Company.create({ name: DEFAULT_COMPANY_NAME, plan: 'agency' });
-  }
-  defaultCompanyId = company._id;
-}
-
 export function attachCompany(req: Request, _res: Response, next: NextFunction): void {
-  if (!defaultCompanyId) {
-    throw new HttpError(500, 'Default company not initialized');
+  const token = req.cookies?.[AUTH_COOKIE_NAME];
+  if (!token) {
+    throw new HttpError(401, 'Not authenticated');
   }
-  req.companyId = defaultCompanyId;
+
+  try {
+    const payload = verifyAuthToken(token);
+    req.userId = new Types.ObjectId(payload.userId);
+    req.companyId = new Types.ObjectId(payload.companyId);
+  } catch {
+    throw new HttpError(401, 'Invalid or expired session');
+  }
+
   next();
 }

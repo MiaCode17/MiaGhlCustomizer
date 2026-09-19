@@ -1,4 +1,5 @@
 import type { AxiosResponse, InternalAxiosRequestConfig } from 'axios';
+import { AuthUser } from '../types/auth';
 import { Company, PlanTier } from '../types/company';
 import { Theme } from '../types/theme';
 import { SpecialTheme } from '../types/specialTheme';
@@ -70,6 +71,11 @@ let company: Company = {
   name: 'Mia GHL',
   plan: 'agency',
 };
+
+// Mock mode starts already "logged in" so the UI preview isn't gated behind
+// a login screen; /auth/login and /auth/logout still work to demo the flow.
+const MOCK_USER: AuthUser = { id: 'mock-user', email: 'demo@miaghl.com' };
+let mockAuthedUser: AuthUser | null = MOCK_USER;
 
 let theme: Theme = {
   themeName: 'Aurora Agency Theme',
@@ -395,6 +401,21 @@ export const mockAdapter = async (
   const path = (config.url ?? '').split('?')[0];
   const query = (config.params ?? {}) as Record<string, string>;
   const body = parseBody(config);
+
+  if (method === 'post' && path === '/auth/login') {
+    mockAuthedUser = MOCK_USER;
+    return respond(config, { user: mockAuthedUser });
+  }
+  if (method === 'post' && path === '/auth/logout') {
+    mockAuthedUser = null;
+    return respond(config, { ok: true });
+  }
+  if (method === 'get' && path === '/auth/me') {
+    if (!mockAuthedUser) {
+      return Promise.reject({ response: { status: 401, data: { error: 'Not authenticated' } } });
+    }
+    return respond(config, { user: mockAuthedUser });
+  }
 
   if (method === 'get' && path === '/company') {
     return respond(config, { company });
