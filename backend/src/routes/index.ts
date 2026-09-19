@@ -1,0 +1,36 @@
+import { Router } from 'express';
+import { bannersRouter } from './banners/routes';
+import { bookACallRouter } from './book-a-call/routes';
+import { buttonBuilderRouter } from './button-builder/routes';
+import { chatBubbleRouter } from './chat-bubble/routes';
+import { companyRouter } from './company/routes';
+import { customFieldsRouter } from './custom-fields/routes';
+import { dynamicLinksRouter } from './dynamic-links/routes';
+import { floatingButtonsRouter } from './floating-buttons/routes';
+import { loaderRouter } from './loader/routes';
+import { logoRouter } from './logo/routes';
+import { loginPageRouter } from './login-page/routes';
+import { menuEditorRouter } from './menu-editor/routes';
+import { miscSettingsRouter } from './misc-settings/routes';
+import { specialThemeRouter } from './special-theme/routes';
+import { themeRouter } from './theme/routes';
+import { uploadsRouter } from './uploads/routes';
+
+export const apiRouter: Router = Router();
+
+apiRouter.use('/company', companyRouter);
+apiRouter.use('/uploads', uploadsRouter);
+apiRouter.use('/theme', themeRouter);
+apiRouter.use('/special-theme', specialThemeRouter);
+apiRouter.use('/logo', logoRouter);
+apiRouter.use('/login-page', loginPageRouter);
+apiRouter.use('/buttons', buttonBuilderRouter);
+apiRouter.use('/book-a-call', bookACallRouter);
+apiRouter.use('/floating-buttons', floatingButtonsRouter);
+apiRouter.use('/dynamic-links', dynamicLinksRouter);
+apiRouter.use('/menu-editor', menuEditorRouter);
+apiRouter.use('/custom-fields', customFieldsRouter);
+apiRouter.use('/banners', bannersRouter);
+apiRouter.use('/chat-bubble', chatBubbleRouter);
+apiRouter.use('/loader', loaderRouter);
+apiRouter.use('/misc-settings', miscSettingsRouter);
