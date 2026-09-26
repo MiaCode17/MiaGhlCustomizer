@@ -1,12 +1,12 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { companyService } from '../services/companyService';
 import { useSession } from './SessionContext';
-import { Company } from '../types/company';
+import { Company, CompanyUpdateInput } from '../types/company';
 
 interface CompanyContextValue {
   company: Company | null;
   isLoading: boolean;
-  updateCompany: (input: { name: string }) => Promise<void>;
+  updateCompany: (input: CompanyUpdateInput) => Promise<void>;
 }
 
 const CompanyContext = createContext<CompanyContextValue | undefined>(undefined);
@@ -29,7 +29,7 @@ export function CompanyProvider({ children }: { children: React.ReactNode }) {
       .finally(() => setIsLoading(false));
   }, [user]);
 
-  const updateCompany = useCallback(async (input: { name: string }) => {
+  const updateCompany = useCallback(async (input: CompanyUpdateInput) => {
     const updated = await companyService.update(input);
     setCompany(updated);
   }, []);

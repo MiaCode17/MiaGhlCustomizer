@@ -1,6 +1,6 @@
 import type { AxiosResponse, InternalAxiosRequestConfig } from 'axios';
 import { AuthUser } from '../types/auth';
-import { Company } from '../types/company';
+import { Company, CompanyUpdateInput } from '../types/company';
 import { Theme, defaultSidebarStyle } from '../types/theme';
 import { SpecialTheme } from '../types/specialTheme';
 import { LogoCampaign, LogoCampaignInput } from '../types/logo';
@@ -16,6 +16,7 @@ import { LoaderConfig } from '../types/loader';
 import { MiscSettings } from '../types/miscSettings';
 import { BookACallConfig } from '../types/bookACall';
 import { ConversationStyleConfig, emptyConversationStyle } from '../types/conversationStyle';
+import { Group, GroupInput } from '../types/group';
 
 const MOCK_COMPANY_ID = 'mock-company';
 const MOCK_GROUP_ID = 'default-group';
@@ -70,6 +71,7 @@ const LOGIN_BACKGROUND_SVG = svgDataUri(
 let company: Company = {
   id: MOCK_COMPANY_ID,
   name: 'Mia GHL',
+  ghlCompanyId: '',
 };
 
 // Mock mode starts already "logged in" so the UI preview isn't gated behind
@@ -390,6 +392,19 @@ let miscSettings: MiscSettings = {
   unreadBadge: { enabled: true },
 };
 
+let groups: Group[] = [
+  {
+    _id: MOCK_GROUP_ID,
+    companyId: MOCK_COMPANY_ID,
+    name: 'VIP clients',
+    type: 'custom',
+    planIds: [],
+    locationIds: ['loc-1001', 'loc-1002'],
+    createdAt: nowIso(),
+    updatedAt: nowIso(),
+  },
+];
+
 function parseBody(config: InternalAxiosRequestConfig): unknown {
   const data: unknown = config.data;
   if (data === undefined || data === null) return undefined;
@@ -443,8 +458,7 @@ export const mockAdapter = async (
     return respond(config, { company });
   }
   if (method === 'put' && path === '/company/update') {
-    const input = body as { name: string };
-    company = { ...company, name: input.name };
+    company = { ...company, ...(body as CompanyUpdateInput) };
     return respond(config, { company });
   }
 
@@ -704,6 +718,57 @@ export const mockAdapter = async (
   if (method === 'put' && path === '/misc-settings/update') {
     miscSettings = body as MiscSettings;
     return respond(config, { settings: miscSettings });
+  }
+
+  if (method === 'get' && path === '/groups') {
+    return respond(config, { groups });
+  }
+  if (method === 'post' && path === '/groups') {
+    const input = body as GroupInput;
+    const group: Group = {
+      ...input,
+      _id: nextId('group'),
+      companyId: MOCK_COMPANY_ID,
+      createdAt: nowIso(),
+      updatedAt: nowIso(),
+    };
+    groups = [...groups, group];
+    return respond(config, { group }, 201);
+  }
+  if (method === 'put' && path.startsWith('/groups/')) {
+    const id = path.slice('/groups/'.length);
+    const input = body as GroupInput;
+    groups = groups.map((g) => (g._id === id ? { ...g, ...input, updatedAt: nowIso() } : g));
+    return respond(config, { group: groups.find((g) => g._id === id) });
+  }
+  if (method === 'delete' && path.startsWith('/groups/')) {
+    const id = path.slice('/groups/'.length);
+    groups = groups.filter((g) => g._id !== id);
+    return respond(config, null, 204);
+  }
+
+  if (method === 'get' && path === '/runtime/config') {
+    const groupId =
+      groups.find((g) => query.locationId && g.locationIds.includes(query.locationId))?._id ?? '';
+    const on = { enabled: true };
+    return respond(config, {
+      groupId,
+      features: {
+        theme: { enabled: theme.enabled },
+        'special-theme': { enabled: specialTheme.enabled },
+        logo: on,
+        buttons: on,
+        'floating-buttons': on,
+        'book-a-call': { enabled: bookACall.enabled },
+        'dynamic-links': on,
+        menu: on,
+        banners: on,
+        'chat-bubble': { enabled: chatBubble.enabled },
+        loader: { enabled: loader.enabled },
+        'conversation-style': { enabled: conversationStyle.enabled },
+        misc: { enabled: miscSettings.tooltip.enabled || miscSettings.addonBanner.enabled },
+      },
+    });
   }
 
   if (method === 'post' && path === '/uploads/image') {

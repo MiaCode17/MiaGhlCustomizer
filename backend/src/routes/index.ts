@@ -9,6 +9,7 @@ import { conversationStyleRouter } from './conversation-style/routes';
 import { customFieldsRouter } from './custom-fields/routes';
 import { dynamicLinksRouter } from './dynamic-links/routes';
 import { floatingButtonsRouter } from './floating-buttons/routes';
+import { groupsRouter } from './groups/routes';
 import { loaderRouter } from './loader/routes';
 import { logoRouter } from './logo/routes';
 import { loginPageRouter } from './login-page/routes';
@@ -22,6 +23,7 @@ export const apiRouter: Router = Router();
 
 apiRouter.use('/auth', authRouter);
 apiRouter.use('/company', companyRouter);
+apiRouter.use('/groups', groupsRouter);
 apiRouter.use('/uploads', uploadsRouter);
 apiRouter.use('/theme', themeRouter);
 apiRouter.use('/special-theme', specialThemeRouter);

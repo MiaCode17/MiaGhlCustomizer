@@ -12,6 +12,8 @@ import {
   ThunderboltOutlined,
   SettingOutlined,
   EyeOutlined,
+  ClusterOutlined,
+  CodeOutlined,
 } from '@ant-design/icons';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useCompany } from '../context/CompanyContext';
@@ -83,6 +85,8 @@ const NAV_ITEMS: NavItem[] = [
   { key: '/miaghlcustomizer/custom-fields', icon: <FormOutlined />, label: 'Custom Fields' },
   { key: '/miaghlcustomizer/misc-settings', icon: <SettingOutlined />, label: 'Misc Settings' },
   { key: '/miaghlcustomizer/preview', icon: <EyeOutlined />, label: 'Preview' },
+  { key: '/miaghlcustomizer/groups', icon: <ClusterOutlined />, label: 'Location Groups' },
+  { key: '/miaghlcustomizer/install', icon: <CodeOutlined />, label: 'Install Script' },
 ];
 
 function findParentKey(pathname: string): string | undefined {

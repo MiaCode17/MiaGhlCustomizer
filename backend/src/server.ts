@@ -6,9 +6,18 @@ import { env } from './config/env';
 import { errorHandler } from './middleware/errorHandler';
 import { UPLOADS_DIR } from './middleware/upload';
 import { apiRouter } from './routes';
+import { cdnRouter, runtimeRouter } from './routes/runtime/routes';
 
 export function createServer(): Express {
   const app = express();
+  // Behind Render/other proxies, so req.protocol reflects https for the embed script's API base.
+  app.set('trust proxy', 1);
+
+  // Public runtime surface, called from inside GHL on each agency's own white-label domain,
+  // so it gets open CORS and no cookies. Mounted before the credentialed CORS below.
+  const publicCors = cors({ origin: '*', credentials: false });
+  app.use('/cdn', publicCors, cdnRouter);
+  app.use('/api/v1/runtime', publicCors, runtimeRouter);
 
   app.use(cors({ origin: env.CORS_ORIGIN, credentials: true }));
   app.use(express.json());

@@ -117,6 +117,13 @@ const PreviewPage = lazy(() =>
   import('../pages/customizer/preview/PreviewPage').then((m) => ({ default: m.PreviewPage })),
 );
 
+const GroupsPage = lazy(() =>
+  import('../pages/customizer/groups/GroupsPage').then((m) => ({ default: m.GroupsPage })),
+);
+const InstallPage = lazy(() =>
+  import('../pages/customizer/install/InstallPage').then((m) => ({ default: m.InstallPage })),
+);
+
 function lazyPage(node: React.ReactNode) {
   return (
     <Suspense
@@ -170,6 +177,8 @@ export const routes: RouteObject[] = [
       },
       { path: '/miaghlcustomizer/misc-settings', element: lazyPage(<MiscSettingsPage />) },
       { path: '/miaghlcustomizer/preview', element: lazyPage(<PreviewPage />) },
+      { path: '/miaghlcustomizer/groups', element: lazyPage(<GroupsPage />) },
+      { path: '/miaghlcustomizer/install', element: lazyPage(<InstallPage />) },
     ],
   },
   { path: '/', element: <Navigate to="/miaghlcustomizer/theme/categories" replace /> },

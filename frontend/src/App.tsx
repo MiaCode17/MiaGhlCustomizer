@@ -1,6 +1,7 @@
 import { ConfigProvider } from 'antd';
 import { useRoutes } from 'react-router-dom';
 import { CompanyProvider } from './context/CompanyContext';
+import { GroupsProvider } from './context/GroupsContext';
 import { SessionProvider } from './context/SessionContext';
 import { BrandThemeProvider, useBrandTheme } from './context/BrandThemeContext';
 import { routes } from './router/routes';
@@ -69,7 +70,9 @@ function ThemedApp() {
     >
       <SessionProvider>
         <CompanyProvider>
-          <AppRoutes />
+          <GroupsProvider>
+            <AppRoutes />
+          </GroupsProvider>
         </CompanyProvider>
       </SessionProvider>
     </ConfigProvider>
