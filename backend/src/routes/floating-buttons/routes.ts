@@ -18,8 +18,12 @@ const subItemSchema = z.object({
 const floatingButtonInputSchema = z.object({
   position: z.enum(['right', 'bottom']),
   label: z.string().min(1),
+  icon: z.string().optional(),
   backgroundColor: z.string().min(1).default('#6366f1'),
   textColor: z.string().min(1).default('#ffffff'),
+  borderRadius: z.number().default(999),
+  shadow: z.enum(['none', 'sm', 'md', 'lg']).default('md'),
+  animation: z.enum(['none', 'pulse', 'bounce', 'shimmer']).default('none'),
   subItems: z.array(subItemSchema).max(8).default([]),
 });
 

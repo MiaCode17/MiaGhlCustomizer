@@ -2,20 +2,23 @@ import { ConfigProvider } from 'antd';
 import { useRoutes } from 'react-router-dom';
 import { CompanyProvider } from './context/CompanyContext';
 import { SessionProvider } from './context/SessionContext';
+import { BrandThemeProvider, useBrandTheme } from './context/BrandThemeContext';
 import { routes } from './router/routes';
 
 function AppRoutes() {
   return useRoutes(routes);
 }
 
-export function App() {
+function ThemedApp() {
+  const { palette } = useBrandTheme();
+
   return (
     <ConfigProvider
       theme={{
         token: {
-          colorPrimary: '#7a1f2b',
-          colorLink: '#7a1f2b',
-          colorInfo: '#7a1f2b',
+          colorPrimary: palette.primary,
+          colorLink: palette.primary,
+          colorInfo: palette.primary,
           colorBgLayout: 'transparent',
           borderRadius: 10,
           fontFamily:
@@ -23,7 +26,7 @@ export function App() {
         },
         components: {
           Layout: {
-            siderBg: '#3a0b14',
+            siderBg: palette.gradientMid,
             headerBg: 'rgba(255,255,255,0.85)',
             bodyBg: 'transparent',
           },
@@ -31,8 +34,8 @@ export function App() {
             darkItemBg: 'transparent',
             darkItemColor: 'rgba(255,255,255,0.72)',
             darkItemHoverColor: '#ffffff',
-            darkItemHoverBg: 'rgba(255,255,255,0.08)',
-            darkItemSelectedBg: '#5c1220',
+            darkItemHoverBg: palette.menuHoverBg,
+            darkItemSelectedBg: palette.menuSelectedBg,
             darkItemSelectedColor: '#ffffff',
             itemBorderRadius: 10,
             itemMarginInline: 10,
@@ -40,8 +43,7 @@ export function App() {
           },
           Card: {
             borderRadiusLG: 16,
-            boxShadowTertiary:
-              '0 1px 2px rgba(122,31,43,0.04), 0 12px 28px rgba(122,31,43,0.08)',
+            boxShadowTertiary: `0 1px 2px ${palette.whisper}, 0 12px 28px ${palette.softShadow}`,
           },
           Button: {
             borderRadius: 8,
@@ -50,13 +52,13 @@ export function App() {
           },
           Table: {
             borderRadiusLG: 12,
-            headerBg: '#fdf0f1',
-            headerColor: '#7a1f2b',
+            headerBg: palette.tintBg,
+            headerColor: palette.primary,
           },
           Tabs: {
-            inkBarColor: '#7a1f2b',
-            itemSelectedColor: '#7a1f2b',
-            itemHoverColor: '#7a1f2b',
+            inkBarColor: palette.primary,
+            itemSelectedColor: palette.primary,
+            itemHoverColor: palette.primary,
           },
           Input: { borderRadius: 8, controlHeight: 38 },
           Select: { borderRadius: 8, controlHeight: 38 },
@@ -71,5 +73,13 @@ export function App() {
         </CompanyProvider>
       </SessionProvider>
     </ConfigProvider>
+  );
+}
+
+export function App() {
+  return (
+    <BrandThemeProvider>
+      <ThemedApp />
+    </BrandThemeProvider>
   );
 }

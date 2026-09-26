@@ -7,10 +7,17 @@ import { ButtonSurface } from '../../models/InjectedButton';
 import { buildRouter, RouteDef } from '../routeTable';
 import { createButton, deleteButton, listButtons, updateButton } from './services';
 
-const BUTTON_SURFACES: ButtonSurface[] = ['header', 'dashboard', 'record-detail', 'record-tab'];
+const BUTTON_SURFACES: ButtonSurface[] = [
+  'header',
+  'dashboard',
+  'contact',
+  'opportunity',
+  'record-detail',
+  'record-tab',
+];
 
 const buttonInputSchema = z.object({
-  surface: z.enum(['header', 'dashboard', 'record-detail', 'record-tab']),
+  surface: z.enum(['header', 'dashboard', 'contact', 'opportunity', 'record-detail', 'record-tab']),
   label: z.string().min(1),
   tooltip: z.string().optional(),
   icon: z.string().optional(),
@@ -18,6 +25,15 @@ const buttonInputSchema = z.object({
   size: z.enum(['small', 'middle', 'large']).default('middle'),
   targetUrl: z.string().optional(),
   order: z.number().default(0),
+  backgroundColor: z.string().optional(),
+  textColor: z.string().optional(),
+  borderColor: z.string().optional(),
+  borderWidth: z.number().default(0),
+  borderRadius: z.number().default(8),
+  iconPosition: z.enum(['left', 'right']).default('left'),
+  shadow: z.enum(['none', 'sm', 'md', 'lg']).default('none'),
+  animation: z.enum(['none', 'pulse', 'bounce', 'shimmer']).default('none'),
+  fullWidth: z.boolean().default(false),
 });
 
 function getGroupId(req: { query: { groupId?: unknown } }): string | undefined {

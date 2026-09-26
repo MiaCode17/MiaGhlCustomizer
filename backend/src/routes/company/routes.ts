@@ -5,13 +5,12 @@ import { attachCompany } from '../../middleware/company';
 import { buildRouter, RouteDef } from '../routeTable';
 import { getCompany, updateCompany } from './services';
 
-function serializeCompany(company: { _id: unknown; name: string; plan: string }) {
-  return { id: String(company._id), name: company.name, plan: company.plan };
+function serializeCompany(company: { _id: unknown; name: string }) {
+  return { id: String(company._id), name: company.name };
 }
 
 const updateCompanySchema = z.object({
   name: z.string().min(1),
-  plan: z.enum(['free', 'pro', 'agency']),
 });
 
 const routes: RouteDef[] = [

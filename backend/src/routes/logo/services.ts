@@ -1,8 +1,6 @@
 import { Types } from 'mongoose';
 import { HttpError } from '../../middleware/errorHandler';
-import { Company } from '../../models/Company';
 import { LogoCampaign } from '../../models/LogoCampaign';
-import { LOGO_CAMPAIGN_LIMITS } from '../../utils/planLimits';
 import { scopeFilter } from '../../utils/scope';
 
 export interface LogoCampaignInput {
@@ -19,17 +17,6 @@ export async function createLogoCampaign(
   groupId: string | undefined,
   input: LogoCampaignInput,
 ) {
-  const company = await Company.findById(companyId);
-  if (!company) {
-    throw new HttpError(404, 'Company not found');
-  }
-
-  const existingCount = await LogoCampaign.countDocuments({ companyId });
-  const limit = LOGO_CAMPAIGN_LIMITS[company.plan];
-  if (existingCount >= limit) {
-    throw new HttpError(403, 'Logo campaign limit reached for your plan');
-  }
-
   return LogoCampaign.create({ ...input, companyId, groupId: groupId ?? '' });
 }
 

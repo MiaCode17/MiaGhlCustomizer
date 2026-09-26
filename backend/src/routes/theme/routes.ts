@@ -19,6 +19,27 @@ const gradientSchema = z.object({
   angle: z.number().min(0).max(360),
 });
 
+const sidebarStyleSchema = z
+  .object({
+    fontFamily: z.string(),
+    fontColor: z.string(),
+    fontSize: z.number(),
+    iconColor: z.string(),
+    iconStyle: z.enum(['outline', 'bold', 'line', 'duotone']),
+    iconSize: z.number(),
+    boldIcons: z.boolean(),
+    itemSpacing: z.number(),
+    itemPadding: z.number(),
+    iconLabelGap: z.number(),
+    cornerRadius: z.number(),
+    hoverEffect: z.enum(['none', 'slide', 'fade', 'scale', 'glow']),
+    hoverTextColor: z.string(),
+    hoverBackgroundColor: z.string(),
+    scrollbarColor: z.string(),
+    locationSwitcherColor: z.string(),
+  })
+  .partial();
+
 const themeInputSchema = z.object({
   themeName: z.string().min(1),
   colorRules: z.array(colorRuleSchema).default([]),
@@ -26,6 +47,7 @@ const themeInputSchema = z.object({
   fonts: z.object({ heading: z.string().min(1), body: z.string().min(1) }),
   borderRadius: z.string().min(1),
   shadowIntensity: z.enum(['none', 'sm', 'md', 'lg']),
+  sidebarStyle: sidebarStyleSchema.default({}),
   enabled: z.boolean(),
 });
 

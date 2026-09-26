@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Button, Form, Input, InputNumber, Modal, Select, Table, message } from 'antd';
+import { Button, Checkbox, Form, Input, InputNumber, Modal, Select, Space, Table, Typography, message } from 'antd';
 import { DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons';
 import { buttonBuilderService } from '../../../services/buttonBuilderService';
 import {
+  ButtonAnimation,
+  ButtonIconPosition,
+  ButtonShadow,
   ButtonSizeVariant,
   ButtonStyleVariant,
   ButtonSurface,
@@ -27,6 +30,25 @@ const SIZE_OPTIONS: { value: ButtonSizeVariant; label: string }[] = [
   { value: 'small', label: 'Small' },
   { value: 'middle', label: 'Middle' },
   { value: 'large', label: 'Large' },
+];
+
+const ICON_POSITION_OPTIONS: { value: ButtonIconPosition; label: string }[] = [
+  { value: 'left', label: 'Left' },
+  { value: 'right', label: 'Right' },
+];
+
+const SHADOW_OPTIONS: { value: ButtonShadow; label: string }[] = [
+  { value: 'none', label: 'None' },
+  { value: 'sm', label: 'Small' },
+  { value: 'md', label: 'Medium' },
+  { value: 'lg', label: 'Large' },
+];
+
+const ANIMATION_OPTIONS: { value: ButtonAnimation; label: string }[] = [
+  { value: 'none', label: 'None' },
+  { value: 'pulse', label: 'Pulse' },
+  { value: 'bounce', label: 'Bounce' },
+  { value: 'shimmer', label: 'Shimmer' },
 ];
 
 export function ButtonSurfaceTable({ surface, groupId }: ButtonSurfaceTableProps) {
@@ -68,6 +90,15 @@ export function ButtonSurfaceTable({ surface, groupId }: ButtonSurfaceTableProps
       size: button.size,
       targetUrl: button.targetUrl ?? '',
       order: button.order,
+      backgroundColor: button.backgroundColor ?? '',
+      textColor: button.textColor ?? '',
+      borderColor: button.borderColor ?? '',
+      borderWidth: button.borderWidth,
+      borderRadius: button.borderRadius,
+      iconPosition: button.iconPosition,
+      shadow: button.shadow,
+      animation: button.animation,
+      fullWidth: button.fullWidth,
     });
     setModalOpen(true);
   };
@@ -190,6 +221,83 @@ export function ButtonSurfaceTable({ surface, groupId }: ButtonSurfaceTableProps
               style={{ width: '100%' }}
             />
           </Form.Item>
+
+          <Typography.Text strong style={{ display: 'block', margin: '8px 0' }}>
+            Appearance
+          </Typography.Text>
+          <Space size="large" wrap style={{ marginBottom: 16 }}>
+            <Form.Item label="Background color" style={{ marginBottom: 0 }}>
+              <input
+                type="color"
+                value={form.backgroundColor || '#7a1f2b'}
+                onChange={(e) => setForm({ ...form, backgroundColor: e.target.value })}
+              />
+            </Form.Item>
+            <Form.Item label="Text color" style={{ marginBottom: 0 }}>
+              <input
+                type="color"
+                value={form.textColor || '#ffffff'}
+                onChange={(e) => setForm({ ...form, textColor: e.target.value })}
+              />
+            </Form.Item>
+            <Form.Item label="Border color" style={{ marginBottom: 0 }}>
+              <input
+                type="color"
+                value={form.borderColor || '#000000'}
+                onChange={(e) => setForm({ ...form, borderColor: e.target.value })}
+              />
+            </Form.Item>
+          </Space>
+          <Space size="large" wrap style={{ marginBottom: 16 }}>
+            <Form.Item label="Border width (px)" style={{ marginBottom: 0 }}>
+              <InputNumber
+                min={0}
+                max={8}
+                value={form.borderWidth}
+                onChange={(v) => setForm({ ...form, borderWidth: v ?? 0 })}
+              />
+            </Form.Item>
+            <Form.Item label="Corner radius (px)" style={{ marginBottom: 0 }}>
+              <InputNumber
+                min={0}
+                max={999}
+                value={form.borderRadius}
+                onChange={(v) => setForm({ ...form, borderRadius: v ?? 0 })}
+              />
+            </Form.Item>
+          </Space>
+          <Space size="large" wrap style={{ marginBottom: 16 }}>
+            <Form.Item label="Icon position" style={{ marginBottom: 0 }}>
+              <Select
+                value={form.iconPosition}
+                options={ICON_POSITION_OPTIONS}
+                style={{ width: 120 }}
+                onChange={(iconPosition) => setForm({ ...form, iconPosition })}
+              />
+            </Form.Item>
+            <Form.Item label="Shadow" style={{ marginBottom: 0 }}>
+              <Select
+                value={form.shadow}
+                options={SHADOW_OPTIONS}
+                style={{ width: 120 }}
+                onChange={(shadow) => setForm({ ...form, shadow })}
+              />
+            </Form.Item>
+            <Form.Item label="Animation" style={{ marginBottom: 0 }}>
+              <Select
+                value={form.animation}
+                options={ANIMATION_OPTIONS}
+                style={{ width: 140 }}
+                onChange={(animation) => setForm({ ...form, animation })}
+              />
+            </Form.Item>
+          </Space>
+          <Checkbox
+            checked={form.fullWidth}
+            onChange={(e) => setForm({ ...form, fullWidth: e.target.checked })}
+          >
+            Full width
+          </Checkbox>
         </Form>
       </Modal>
     </div>

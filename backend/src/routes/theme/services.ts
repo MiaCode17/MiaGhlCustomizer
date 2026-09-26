@@ -9,6 +9,7 @@ export interface ThemeInput {
   fonts: ThemeDoc['fonts'];
   borderRadius: string;
   shadowIntensity: ThemeDoc['shadowIntensity'];
+  sidebarStyle: Partial<ThemeDoc['sidebarStyle']>;
   enabled: boolean;
 }
 

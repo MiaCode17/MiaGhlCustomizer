@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Tag, Typography } from 'antd';
 import { Theme } from '../../../types/theme';
+import { useBrandTheme } from '../../../context/BrandThemeContext';
+import { withAlpha } from '../../../utils/colorUtils';
 
 interface ThemeCardProps {
   theme: Theme;
@@ -36,6 +38,7 @@ function Chip({ color, size }: { color: string; size: number }) {
 
 export function ThemeCard({ theme, active, onClick }: ThemeCardProps) {
   const [hovered, setHovered] = useState(false);
+  const { palette } = useBrandTheme();
 
   const headerGradient = theme.gradients.find((g) => g.target === 'header');
   const mainColor = theme.colorRules[0]?.value ?? headerGradient?.from ?? '#c9c2ba';
@@ -66,12 +69,12 @@ export function ThemeCard({ theme, active, onClick }: ThemeCardProps) {
         width: 280,
         cursor: 'pointer',
         borderRadius: 18,
-        border: active ? '2px solid #7a1f2b' : '1px solid #e5e7eb',
+        border: active ? `2px solid ${palette.primary}` : '1px solid #e5e7eb',
         background: '#fff',
         padding: 20,
         transform: lifted ? 'translateY(-4px)' : 'translateY(0)',
         boxShadow: active
-          ? `0 5px 0 0 #e0a3ad, 0 ${lifted ? 18 : 12}px 24px rgba(122,31,43,0.22)`
+          ? `0 5px 0 0 ${palette.tintBorder}, 0 ${lifted ? 18 : 12}px 24px ${withAlpha(palette.primary, 0.22)}`
           : `0 4px 0 0 #e5e1dc, 0 ${lifted ? 14 : 6}px 18px rgba(31,25,20,0.12)`,
         transition: 'transform 0.18s ease, box-shadow 0.18s ease, border-color 0.15s ease',
       }}
@@ -108,9 +111,12 @@ export function ThemeCard({ theme, active, onClick }: ThemeCardProps) {
           }}
         />
         {theme.isCustom && (
-          <Tag color="#7a1f2b" style={{ position: 'absolute', top: 12, left: 12, marginRight: 0, fontSize: 12 }}>
+          <Tag color={palette.primary} style={{ position: 'absolute', top: 12, left: 12, marginRight: 0, fontSize: 12 }}>
             Yours
           </Tag>
+        )}
+        {theme.isDefault && (
+          <Tag style={{ position: 'absolute', top: 12, left: 12, marginRight: 0, fontSize: 12 }}>Default</Tag>
         )}
         <div
           style={{

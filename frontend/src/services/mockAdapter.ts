@@ -1,7 +1,7 @@
 import type { AxiosResponse, InternalAxiosRequestConfig } from 'axios';
 import { AuthUser } from '../types/auth';
-import { Company, PlanTier } from '../types/company';
-import { Theme } from '../types/theme';
+import { Company } from '../types/company';
+import { Theme, defaultSidebarStyle } from '../types/theme';
 import { SpecialTheme } from '../types/specialTheme';
 import { LogoCampaign, LogoCampaignInput } from '../types/logo';
 import { LoginPageConfig } from '../types/loginPage';
@@ -15,6 +15,7 @@ import { ChatBubbleConfig } from '../types/chatBubble';
 import { LoaderConfig } from '../types/loader';
 import { MiscSettings } from '../types/miscSettings';
 import { BookACallConfig } from '../types/bookACall';
+import { ConversationStyleConfig, emptyConversationStyle } from '../types/conversationStyle';
 
 const MOCK_COMPANY_ID = 'mock-company';
 const MOCK_GROUP_ID = 'default-group';
@@ -69,7 +70,6 @@ const LOGIN_BACKGROUND_SVG = svgDataUri(
 let company: Company = {
   id: MOCK_COMPANY_ID,
   name: 'Mia GHL',
-  plan: 'agency',
 };
 
 // Mock mode starts already "logged in" so the UI preview isn't gated behind
@@ -92,6 +92,7 @@ let theme: Theme = {
   fonts: { heading: 'Poppins', body: 'Inter' },
   borderRadius: '8px',
   shadowIntensity: 'md',
+  sidebarStyle: defaultSidebarStyle,
   enabled: true,
 };
 
@@ -140,6 +141,15 @@ let loginPageConfig: LoginPageConfig = {
   customCss: '.login-card { border-radius: 16px; }',
 };
 
+const BUTTON_STYLE_KIT_DEFAULTS = {
+  borderWidth: 0,
+  borderRadius: 8,
+  iconPosition: 'left' as const,
+  shadow: 'none' as const,
+  animation: 'none' as const,
+  fullWidth: false,
+};
+
 const buttons: InjectedButton[] = [
   {
     _id: 'btn-1',
@@ -153,6 +163,7 @@ const buttons: InjectedButton[] = [
     size: 'middle',
     targetUrl: 'https://miaghl.com/upgrade',
     order: 0,
+    ...BUTTON_STYLE_KIT_DEFAULTS,
     createdAt: '2026-08-15T10:00:00.000Z',
     updatedAt: '2026-08-15T10:00:00.000Z',
   },
@@ -168,6 +179,7 @@ const buttons: InjectedButton[] = [
     size: 'middle',
     targetUrl: 'https://miaghl.com/demo',
     order: 0,
+    ...BUTTON_STYLE_KIT_DEFAULTS,
     createdAt: '2026-08-16T10:00:00.000Z',
     updatedAt: '2026-08-16T10:00:00.000Z',
   },
@@ -183,6 +195,7 @@ const buttons: InjectedButton[] = [
     size: 'small',
     targetUrl: 'https://zapier.com',
     order: 0,
+    ...BUTTON_STYLE_KIT_DEFAULTS,
     createdAt: '2026-08-17T10:00:00.000Z',
     updatedAt: '2026-08-17T10:00:00.000Z',
   },
@@ -198,6 +211,7 @@ const buttons: InjectedButton[] = [
     size: 'small',
     targetUrl: '#',
     order: 0,
+    ...BUTTON_STYLE_KIT_DEFAULTS,
     createdAt: '2026-08-18T10:00:00.000Z',
     updatedAt: '2026-08-18T10:00:00.000Z',
   },
@@ -212,6 +226,9 @@ const floatingButtons: FloatingButton[] = [
     label: 'Quick Help',
     backgroundColor: '#6366F1',
     textColor: '#FFFFFF',
+    borderRadius: 999,
+    shadow: 'md',
+    animation: 'none',
     subItems: [
       { label: 'Help Center', url: 'https://help.miaghl.com' },
       { label: 'Contact Support', url: 'https://miaghl.com/support' },
@@ -227,6 +244,9 @@ const floatingButtons: FloatingButton[] = [
     label: 'Feedback',
     backgroundColor: '#22C55E',
     textColor: '#FFFFFF',
+    borderRadius: 999,
+    shadow: 'md',
+    animation: 'none',
     subItems: [
       { label: 'Feature Request', url: 'https://miaghl.com/feedback' },
       { label: 'Report a Bug', url: 'https://miaghl.com/bugs' },
@@ -355,6 +375,8 @@ let bookACall: BookACallConfig = {
   textColor: '#ffffff',
 };
 
+let conversationStyle: ConversationStyleConfig = emptyConversationStyle;
+
 let miscSettings: MiscSettings = {
   tooltip: { enabled: true, buttonText: 'Need help?', placement: 'bottom-right' },
   addonBanner: {
@@ -421,8 +443,8 @@ export const mockAdapter = async (
     return respond(config, { company });
   }
   if (method === 'put' && path === '/company/update') {
-    const input = body as { name: string; plan: PlanTier };
-    company = { ...company, name: input.name, plan: input.plan };
+    const input = body as { name: string };
+    company = { ...company, name: input.name };
     return respond(config, { company });
   }
 
@@ -666,6 +688,14 @@ export const mockAdapter = async (
   if (method === 'put' && path === '/loader/update') {
     loader = body as LoaderConfig;
     return respond(config, { loader });
+  }
+
+  if (method === 'get' && path === '/conversation-style') {
+    return respond(config, { conversationStyle });
+  }
+  if (method === 'put' && path === '/conversation-style/update') {
+    conversationStyle = body as ConversationStyleConfig;
+    return respond(config, { conversationStyle });
   }
 
   if (method === 'get' && path === '/misc-settings') {

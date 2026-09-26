@@ -1,22 +1,13 @@
 import { useEffect, useState } from 'react';
-import { Button, Card, Empty, Input, Modal, Space, Typography, Upload, message } from 'antd';
+import { Button, Card, Empty, Input, Modal, Space, Upload, message } from 'antd';
 import { DeleteOutlined, PictureOutlined, PlusOutlined, UploadOutlined } from '@ant-design/icons';
 import { PageIntro } from '../../../components/PageIntro';
 import { logoService } from '../../../services/logoService';
 import { uploadService } from '../../../services/uploadService';
 import { assetUrl } from '../../../utils/assetUrl';
-import { useCompany } from '../../../context/CompanyContext';
 import { LogoCampaign } from '../../../types/logo';
-import { PlanTier } from '../../../types/company';
-
-const LOGO_CAMPAIGN_LIMITS: Record<PlanTier, number | 'Unlimited'> = {
-  free: 1,
-  pro: 5,
-  agency: 'Unlimited',
-};
 
 export function LogoPage() {
-  const { company } = useCompany();
   const [groupId, setGroupId] = useState<string | undefined>(undefined);
   const [campaigns, setCampaigns] = useState<LogoCampaign[]>([]);
   const [loading, setLoading] = useState(true);
@@ -92,9 +83,6 @@ export function LogoPage() {
     }
   };
 
-  const limit = company ? LOGO_CAMPAIGN_LIMITS[company.plan] : undefined;
-  const usageLabel = limit !== undefined ? `${campaigns.length} of ${limit} used` : undefined;
-
   return (
     <div className="pt-4">
       <PageIntro
@@ -108,12 +96,9 @@ export function LogoPage() {
         title="Logo campaigns"
         loading={loading}
         extra={
-          <Space>
-            {usageLabel && <Typography.Text type="secondary">{usageLabel}</Typography.Text>}
-            <Button type="primary" icon={<PlusOutlined />} onClick={openModal}>
-              Add logo campaign
-            </Button>
-          </Space>
+          <Button type="primary" icon={<PlusOutlined />} onClick={openModal}>
+            Add logo campaign
+          </Button>
         }
       >
         {campaigns.length === 0 ? (

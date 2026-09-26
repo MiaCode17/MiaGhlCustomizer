@@ -1,25 +1,22 @@
 import { useEffect, useState } from 'react';
-import { Layout, Menu, Typography, Tag, Space, Button } from 'antd';
+import { Layout, Menu, Typography, Space, Button, Avatar, Tooltip } from 'antd';
 import type { MenuProps } from 'antd';
 import {
   BgColorsOutlined,
-  GiftOutlined,
   PictureOutlined,
   LoginOutlined,
   LogoutOutlined,
   AppstoreOutlined,
-  LinkOutlined,
   MenuOutlined,
   FormOutlined,
-  NotificationOutlined,
-  MessageOutlined,
-  LoadingOutlined,
+  ThunderboltOutlined,
   SettingOutlined,
   EyeOutlined,
 } from '@ant-design/icons';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useCompany } from '../context/CompanyContext';
 import { useSession } from '../context/SessionContext';
+import { useBrandTheme } from '../context/BrandThemeContext';
 
 const { Header, Sider, Content } = Layout;
 
@@ -39,12 +36,12 @@ const NAV_ITEMS: NavItem[] = [
     icon: <BgColorsOutlined />,
     label: 'Custom Themes',
     children: [
-      { key: '/miaghlcustomizer/theme/ready-made', label: 'Ready Made' },
+      { key: '/miaghlcustomizer/theme/categories', label: 'Theme Categories' },
+      { key: '/miaghlcustomizer/theme/occasional', label: 'Occasional Themes' },
+      { key: '/miaghlcustomizer/theme/sidebar-styling', label: 'Sidebar Styling' },
       { key: '/miaghlcustomizer/theme/make-your-own', label: 'Make Your Own' },
-      { key: '/miaghlcustomizer/theme/gallery', label: 'Theme Gallery' },
     ],
   },
-  { key: '/miaghlcustomizer/special-theme', icon: <GiftOutlined />, label: 'Special Theme' },
   { key: '/miaghlcustomizer/logo', icon: <PictureOutlined />, label: 'Logo' },
   { key: '/miaghlcustomizer/login-page', icon: <LoginOutlined />, label: 'Login Page' },
   {
@@ -52,18 +49,38 @@ const NAV_ITEMS: NavItem[] = [
     icon: <AppstoreOutlined />,
     label: 'Custom Buttons',
     children: [
-      { key: '/miaghlcustomizer/buttons/header', label: 'Header button' },
+      { key: '/miaghlcustomizer/buttons/header', label: 'Header' },
+      { key: '/miaghlcustomizer/buttons/side', label: 'Side' },
+      { key: '/miaghlcustomizer/buttons/contact', label: 'Contact' },
+      { key: '/miaghlcustomizer/buttons/opportunity', label: 'Opportunity' },
+      { key: '/miaghlcustomizer/buttons/dashboard', label: 'Dashboard' },
+      { key: '/miaghlcustomizer/buttons/bottom', label: 'Bottom' },
       { key: '/miaghlcustomizer/buttons/book-a-call', label: 'Book a Call' },
-      { key: '/miaghlcustomizer/buttons/floating-right', label: 'Floating Right button' },
-      { key: '/miaghlcustomizer/buttons/floating-bottom', label: 'Floating Bottom Button' },
     ],
   },
-  { key: '/miaghlcustomizer/dynamic-links', icon: <LinkOutlined />, label: 'Dynamic Links' },
-  { key: '/miaghlcustomizer/menu-editor', icon: <MenuOutlined />, label: 'Menu Editor' },
+  {
+    key: 'menu-builder',
+    icon: <MenuOutlined />,
+    label: 'Menu Builder',
+    children: [
+      { key: '/miaghlcustomizer/menu/custom-link', label: 'Custom Menu Link' },
+      { key: '/miaghlcustomizer/menu/main-nav', label: 'Main Nav' },
+      { key: '/miaghlcustomizer/menu/extended-nav', label: 'Extended Nav' },
+      { key: '/miaghlcustomizer/menu/settings-nav', label: 'Settings Nav' },
+    ],
+  },
+  {
+    key: 'engagement-hub',
+    icon: <ThunderboltOutlined />,
+    label: 'Engagement Hub',
+    children: [
+      { key: '/miaghlcustomizer/engagement/chat-manager', label: 'Chat Manager' },
+      { key: '/miaghlcustomizer/engagement/loader', label: 'Loader' },
+      { key: '/miaghlcustomizer/engagement/banners', label: 'Banners' },
+      { key: '/miaghlcustomizer/engagement/conversations', label: 'Conversation Customization' },
+    ],
+  },
   { key: '/miaghlcustomizer/custom-fields', icon: <FormOutlined />, label: 'Custom Fields' },
-  { key: '/miaghlcustomizer/banners', icon: <NotificationOutlined />, label: 'Banners' },
-  { key: '/miaghlcustomizer/chat-bubble', icon: <MessageOutlined />, label: 'Chat Bubble' },
-  { key: '/miaghlcustomizer/loader', icon: <LoadingOutlined />, label: 'Loader' },
   { key: '/miaghlcustomizer/misc-settings', icon: <SettingOutlined />, label: 'Misc Settings' },
   { key: '/miaghlcustomizer/preview', icon: <EyeOutlined />, label: 'Preview' },
 ];
@@ -81,15 +98,10 @@ function findCurrentLeaf(pathname: string): LeafNavItem | undefined {
   return undefined;
 }
 
-const PLAN_COLORS: Record<string, string> = {
-  free: '#64748b',
-  pro: '#7a1f2b',
-  agency: '#a16207',
-};
-
 export function DefaultLayout() {
   const { company } = useCompany();
   const { user, logout } = useSession();
+  const { palette } = useBrandTheme();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -124,7 +136,7 @@ export function DefaultLayout() {
   return (
     <Layout style={{ minHeight: '100vh' }}>
       <Sider
-        width={252}
+        width={256}
         theme="dark"
         className="app-sider"
         style={{
@@ -132,44 +144,49 @@ export function DefaultLayout() {
           height: '100vh',
           position: 'sticky',
           top: 0,
-          background: 'linear-gradient(180deg, #4a0f1a 0%, #300a11 55%, #250509 100%)',
+          background: `linear-gradient(180deg, var(--brand-gradient-top, ${palette.gradientTop}) 0%, var(--brand-gradient-mid, ${palette.gradientMid}) 55%, var(--brand-gradient-bottom, ${palette.gradientBottom}) 100%)`,
         }}
       >
         <div
-          className="flex items-center gap-3 px-4"
-          style={{ minHeight: 72, padding: '16px', position: 'relative' }}
+          className="flex items-center gap-3 px-4 app-sider-brand"
+          style={{ minHeight: 76, padding: '18px 16px', position: 'relative' }}
         >
           <div
+            className="app-sider-logo"
             style={{
-              width: 38,
-              height: 38,
-              borderRadius: 10,
+              width: 40,
+              height: 40,
+              borderRadius: 12,
               flexShrink: 0,
-              background: 'linear-gradient(135deg, #c96b7e, #7a1f2b)',
+              background: `linear-gradient(135deg, var(--brand-primary-hover, ${palette.primaryHover}), var(--brand-primary, ${palette.primary}))`,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              boxShadow: '0 4px 14px rgba(0,0,0,0.35), inset 0 0 0 1px rgba(255,255,255,0.15)',
+              boxShadow: `0 6px 18px var(--brand-glow, ${palette.glow}), inset 0 0 0 1px rgba(255,255,255,0.18)`,
             }}
           >
-            <Typography.Text style={{ color: '#ffffff', fontWeight: 700, fontSize: 16 }}>M</Typography.Text>
+            <Typography.Text style={{ color: 'var(--brand-on-primary, #fff)', fontWeight: 700, fontSize: 17 }}>
+              M
+            </Typography.Text>
           </div>
-          <div style={{ lineHeight: 1.2 }}>
+          <div style={{ lineHeight: 1.25, flex: 1, minWidth: 0 }}>
             <Typography.Text style={{ color: '#ffffff', fontWeight: 600, fontSize: 15, display: 'block' }}>
               Mia GHL
             </Typography.Text>
-            <Typography.Text style={{ color: 'rgba(255,255,255,0.55)', fontSize: 12 }}>
-              Customizer
-            </Typography.Text>
+            <Space size={6} align="center">
+              <Typography.Text style={{ color: 'rgba(255,255,255,0.55)', fontSize: 12 }}>
+                Customizer
+              </Typography.Text>
+              <Tooltip title="Chrome follows your active theme's color">
+                <span
+                  className="app-brand-pulse"
+                  style={{ background: `var(--brand-accent, ${palette.accent})` }}
+                />
+              </Tooltip>
+            </Space>
           </div>
         </div>
-        <div
-          style={{
-            height: 1,
-            margin: '0 16px 12px',
-            background: 'linear-gradient(90deg, transparent, rgba(212,175,55,0.55), transparent)',
-          }}
-        />
+        <div className="app-sider-divider" />
         <Menu
           mode="inline"
           theme="dark"
@@ -180,33 +197,49 @@ export function DefaultLayout() {
           items={menuItems}
           style={{ background: 'transparent', padding: '0 0 12px' }}
         />
+        {user && (
+          <div className="app-sider-footer">
+            <Avatar
+              size={32}
+              style={{
+                background: `linear-gradient(135deg, var(--brand-primary-hover, ${palette.primaryHover}), var(--brand-primary, ${palette.primary}))`,
+                color: 'var(--brand-on-primary, #fff)',
+                fontWeight: 600,
+                flexShrink: 0,
+              }}
+            >
+              {user.email.charAt(0).toUpperCase()}
+            </Avatar>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <Typography.Text
+                style={{ color: 'rgba(255,255,255,0.85)', fontSize: 13, display: 'block' }}
+                ellipsis
+              >
+                {user.email}
+              </Typography.Text>
+              <Typography.Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 11 }}>
+                Signed in
+              </Typography.Text>
+            </div>
+          </div>
+        )}
       </Sider>
       <Layout>
-        <Header
-          style={{
-            background: 'rgba(255,255,255,0.85)',
-            backdropFilter: 'blur(8px)',
-            borderBottom: '1px solid rgba(122,31,43,0.14)',
-          }}
-          className="flex items-center justify-between px-6"
-        >
+        <Header className="app-header flex items-center justify-between px-6">
           <Space size={10}>
-            <span style={{ color: '#7a1f2b', fontSize: 18 }}>{current?.icon}</span>
+            <span
+              className="app-header-icon"
+              style={{ color: `var(--brand-primary, ${palette.primary})`, fontSize: 18 }}
+            >
+              {current?.icon}
+            </span>
             <Typography.Title level={4} style={{ margin: 0 }}>
               {current?.label ?? 'Customizer'}
             </Typography.Title>
           </Space>
           <Space size={16}>
             {company && (
-              <Space size={10}>
-                <Typography.Text type="secondary">{company.name}</Typography.Text>
-                <Tag
-                  color={PLAN_COLORS[company.plan]}
-                  style={{ textTransform: 'capitalize', borderRadius: 999, padding: '2px 12px' }}
-                >
-                  {company.plan}
-                </Tag>
-              </Space>
+              <Typography.Text type="secondary">{company.name}</Typography.Text>
             )}
             {user && (
               <Button icon={<LogoutOutlined />} onClick={handleLogout}>
@@ -216,7 +249,9 @@ export function DefaultLayout() {
           </Space>
         </Header>
         <Content style={{ padding: '28px 32px' }}>
-          <Outlet />
+          <div key={location.pathname} className="app-page-transition">
+            <Outlet />
+          </div>
         </Content>
       </Layout>
     </Layout>

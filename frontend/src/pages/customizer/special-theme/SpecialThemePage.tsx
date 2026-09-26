@@ -12,6 +12,7 @@ const SEASONAL_THEMES = [
   { key: 'new-year', label: 'New Year', emoji: '🎉', gradient: ['#ffd60a', '#000814'] },
   { key: 'valentines', label: "Valentine's", emoji: '💕', gradient: ['#ff8fa3', '#c9184a'] },
   { key: 'summer', label: 'Summer', emoji: '☀️', gradient: ['#00b4d8', '#ffb703'] },
+  { key: 'black-friday', label: 'Black Friday', emoji: '🛍️', gradient: ['#000000', '#7a1f2b'] },
 ] as const;
 
 export function SpecialThemePage() {
@@ -56,7 +57,7 @@ export function SpecialThemePage() {
     <div className="pt-4">
       <PageIntro
         icon={<GiftOutlined />}
-        description="Turn on a festive seasonal skin with an optional popup and page effect."
+        description="Occasional themes: turn on a festive seasonal skin with an optional popup and page effect. To design a fully custom one-off look instead, use Make Your Own and save it under its own name."
         groupId={groupId}
         onGroupChange={setGroupId}
       />

@@ -1,5 +1,5 @@
 import { apiClient } from './apiClient';
-import { Company, PlanTier } from '../types/company';
+import { Company } from '../types/company';
 
 export const companyService = {
   async get(): Promise<Company> {
@@ -7,7 +7,7 @@ export const companyService = {
     return data.company;
   },
 
-  async update(input: { name: string; plan: PlanTier }): Promise<Company> {
+  async update(input: { name: string }): Promise<Company> {
     const { data } = await apiClient.put<{ company: Company }>('/company/update', input);
     return data.company;
   },

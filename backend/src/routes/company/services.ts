@@ -10,10 +10,7 @@ export async function getCompany(companyId: Types.ObjectId) {
   return company;
 }
 
-export async function updateCompany(
-  companyId: Types.ObjectId,
-  input: { name: string; plan: 'free' | 'pro' | 'agency' },
-) {
+export async function updateCompany(companyId: Types.ObjectId, input: { name: string }) {
   const company = await Company.findByIdAndUpdate(companyId, { $set: input }, { new: true });
   if (!company) {
     throw new HttpError(404, 'Company not found');

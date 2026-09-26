@@ -22,7 +22,7 @@ export async function ensureDefaultAdmin(): Promise<void> {
 
   let company = await Company.findOne();
   if (!company) {
-    company = await Company.create({ name: DEFAULT_COMPANY_NAME, plan: 'agency' });
+    company = await Company.create({ name: DEFAULT_COMPANY_NAME });
   }
 
   const passwordHash = await bcrypt.hash(env.ADMIN_PASSWORD, 10);

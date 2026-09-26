@@ -1,5 +1,6 @@
 import { ReactNode } from 'react';
 import { Typography } from 'antd';
+import { useBrandTheme } from '../context/BrandThemeContext';
 import { GroupSelector } from './GroupSelector';
 
 interface PageIntroProps {
@@ -10,6 +11,8 @@ interface PageIntroProps {
 }
 
 export function PageIntro({ icon, description, groupId, onGroupChange }: PageIntroProps) {
+  const { palette } = useBrandTheme();
+
   return (
     <div
       className="flex items-center justify-between gap-4 flex-wrap"
@@ -19,6 +22,7 @@ export function PageIntro({ icon, description, groupId, onGroupChange }: PageInt
         borderRadius: 14,
         padding: '16px 20px',
         marginBottom: 24,
+        transition: 'background 0.4s ease',
       }}
     >
       <div className="flex items-center gap-3">
@@ -28,18 +32,19 @@ export function PageIntro({ icon, description, groupId, onGroupChange }: PageInt
             height: 38,
             borderRadius: 10,
             flexShrink: 0,
-            background: 'linear-gradient(135deg, #c96b7e, #7a1f2b)',
+            background: `linear-gradient(135deg, ${palette.primaryHover}, ${palette.primary})`,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: '#ffffff',
+            color: palette.onPrimary,
             fontSize: 17,
-            boxShadow: '0 6px 16px rgba(122,31,43,0.28)',
+            boxShadow: `0 6px 16px ${palette.softShadow}`,
+            transition: 'background 0.4s ease, box-shadow 0.4s ease',
           }}
         >
           {icon}
         </div>
-        <Typography.Text style={{ color: '#5c1220', maxWidth: 560 }}>{description}</Typography.Text>
+        <Typography.Text style={{ color: palette.primary, maxWidth: 560 }}>{description}</Typography.Text>
       </div>
       <GroupSelector value={groupId} onChange={onGroupChange} />
     </div>

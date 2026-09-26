@@ -4,6 +4,7 @@ import { BgColorsOutlined } from '@ant-design/icons';
 import { PageIntro } from '../../../components/PageIntro';
 import { themeService } from '../../../services/themeService';
 import { emptyTheme, Theme } from '../../../types/theme';
+import { useBrandTheme } from '../../../context/BrandThemeContext';
 import { ColorRulesTable } from './ColorRulesTable';
 import { GradientEditor } from './GradientEditor';
 
@@ -14,6 +15,13 @@ export function MakeYourOwnThemePage() {
   const [theme, setTheme] = useState<Theme>(emptyTheme);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const { setActiveTheme } = useBrandTheme();
+
+  // Preview the customizer chrome in the theme's brand color as it's edited,
+  // but not before the real theme has finished loading (avoids a flash of red-wine).
+  useEffect(() => {
+    if (!loading) setActiveTheme(theme);
+  }, [theme, loading, setActiveTheme]);
 
   useEffect(() => {
     let cancelled = false;

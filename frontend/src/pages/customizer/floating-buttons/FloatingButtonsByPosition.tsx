@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
-import { Button, Card, Form, Input, Modal, Space, Table, message } from 'antd';
+import { Button, Card, Form, Input, InputNumber, Modal, Select, Space, Table, message } from 'antd';
 import { DeleteOutlined, EditOutlined, PlusOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import { PageIntro } from '../../../components/PageIntro';
 import { floatingButtonsService } from '../../../services/floatingButtonsService';
 import {
   FloatingButton,
+  FloatingButtonAnimation,
   FloatingButtonInput,
   FloatingButtonPosition,
+  FloatingButtonShadow,
   emptyFloatingButtonInput,
 } from '../../../types/floatingButton';
 import { SubItemsEditor } from './SubItemsEditor';
@@ -15,6 +17,20 @@ interface FloatingButtonsByPositionProps {
   position: FloatingButtonPosition;
   description: string;
 }
+
+const SHADOW_OPTIONS: { value: FloatingButtonShadow; label: string }[] = [
+  { value: 'none', label: 'None' },
+  { value: 'sm', label: 'Small' },
+  { value: 'md', label: 'Medium' },
+  { value: 'lg', label: 'Large' },
+];
+
+const ANIMATION_OPTIONS: { value: FloatingButtonAnimation; label: string }[] = [
+  { value: 'none', label: 'None' },
+  { value: 'pulse', label: 'Pulse' },
+  { value: 'bounce', label: 'Bounce' },
+  { value: 'shimmer', label: 'Shimmer' },
+];
 
 export function FloatingButtonsByPosition({ position, description }: FloatingButtonsByPositionProps) {
   const [groupId, setGroupId] = useState<string | undefined>(undefined);
@@ -52,8 +68,12 @@ export function FloatingButtonsByPosition({ position, description }: FloatingBut
     setForm({
       position: button.position,
       label: button.label,
+      icon: button.icon ?? '',
       backgroundColor: button.backgroundColor,
       textColor: button.textColor,
+      borderRadius: button.borderRadius,
+      shadow: button.shadow,
+      animation: button.animation,
       subItems: button.subItems,
     });
     setModalOpen(true);
@@ -175,7 +195,14 @@ export function FloatingButtonsByPosition({ position, description }: FloatingBut
           <Form.Item label="Label" required>
             <Input value={form.label} onChange={(e) => setForm({ ...form, label: e.target.value })} />
           </Form.Item>
-          <Space size="large">
+          <Form.Item label="Icon">
+            <Input
+              value={form.icon}
+              onChange={(e) => setForm({ ...form, icon: e.target.value })}
+              placeholder="e.g. star, bolt"
+            />
+          </Form.Item>
+          <Space size="large" wrap>
             <Form.Item label="Background color">
               <input
                 type="color"
@@ -188,6 +215,32 @@ export function FloatingButtonsByPosition({ position, description }: FloatingBut
                 type="color"
                 value={form.textColor}
                 onChange={(e) => setForm({ ...form, textColor: e.target.value })}
+              />
+            </Form.Item>
+            <Form.Item label="Corner radius (px)">
+              <InputNumber
+                min={0}
+                max={999}
+                value={form.borderRadius}
+                onChange={(v) => setForm({ ...form, borderRadius: v ?? 0 })}
+              />
+            </Form.Item>
+          </Space>
+          <Space size="large" wrap>
+            <Form.Item label="Shadow">
+              <Select
+                value={form.shadow}
+                options={SHADOW_OPTIONS}
+                style={{ width: 120 }}
+                onChange={(shadow) => setForm({ ...form, shadow })}
+              />
+            </Form.Item>
+            <Form.Item label="Animation">
+              <Select
+                value={form.animation}
+                options={ANIMATION_OPTIONS}
+                style={{ width: 140 }}
+                onChange={(animation) => setForm({ ...form, animation })}
               />
             </Form.Item>
           </Space>

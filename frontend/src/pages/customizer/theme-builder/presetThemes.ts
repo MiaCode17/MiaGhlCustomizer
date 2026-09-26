@@ -1,30 +1,34 @@
-import { Theme } from '../../../types/theme';
+import { Theme, ThemeCategory, defaultSidebarStyle } from '../../../types/theme';
 
-function preset(theme: Omit<Theme, 'enabled'>): Theme {
-  return { ...theme, enabled: true };
+function preset(theme: Omit<Theme, 'enabled' | 'sidebarStyle'> & { sidebarStyle?: Theme['sidebarStyle'] }): Theme {
+  return { ...theme, sidebarStyle: theme.sidebarStyle ?? defaultSidebarStyle, enabled: true };
 }
+
+/** The app's out-of-the-box identity — deep red wine. Picking this resets the customizer back to default. */
+export const DEFAULT_THEME: Theme = preset({
+  themeName: 'Default',
+  description: "Mia GHL's original deep red wine look. Pick this to reset everything back to default.",
+  isDefault: true,
+  colorRules: [
+    { name: 'Header background', selector: '.hl-header', property: 'background-color', value: '#4a0f1a' },
+    { name: 'Sidebar background', selector: '.hl-sidebar', property: 'background-color', value: '#300a11' },
+    { name: 'Primary button', selector: '.hl-btn-primary', property: 'background-color', value: '#7a1f2b' },
+    { name: 'Link color', selector: '.hl-link', property: 'color', value: '#c96b7e' },
+  ],
+  gradients: [
+    { target: 'header', from: '#4a0f1a', to: '#250509', angle: 180 },
+    { target: 'button', from: '#c96b7e', to: '#7a1f2b', angle: 135 },
+  ],
+  fonts: { heading: 'Inter', body: 'Inter' },
+  borderRadius: '10px',
+  shadowIntensity: 'md',
+});
 
 export const PRESET_THEMES: Theme[] = [
   preset({
-    themeName: 'Midnight Wine',
-    description: 'Deep, moody reds for a bold, premium feel.',
-    colorRules: [
-      { name: 'Header background', selector: '.hl-header', property: 'background-color', value: '#3a0b14' },
-      { name: 'Sidebar background', selector: '.hl-sidebar', property: 'background-color', value: '#2b070d' },
-      { name: 'Primary button', selector: '.hl-btn-primary', property: 'background-color', value: '#7a1f2b' },
-      { name: 'Link color', selector: '.hl-link', property: 'color', value: '#c96b7e' },
-    ],
-    gradients: [
-      { target: 'header', from: '#4a0f1a', to: '#7a1f2b', angle: 135 },
-      { target: 'button', from: '#c96b7e', to: '#7a1f2b', angle: 135 },
-    ],
-    fonts: { heading: 'Poppins', body: 'Inter' },
-    borderRadius: '10px',
-    shadowIntensity: 'md',
-  }),
-  preset({
     themeName: 'Ocean Breeze',
     description: 'Cool, calm blues that keep things light and easy.',
+    category: 'naturecore',
     colorRules: [
       { name: 'Header background', selector: '.hl-header', property: 'background-color', value: '#0c4a6e' },
       { name: 'Sidebar background', selector: '.hl-sidebar', property: 'background-color', value: '#082f49' },
@@ -42,6 +46,7 @@ export const PRESET_THEMES: Theme[] = [
   preset({
     themeName: 'Sunset Gradient',
     description: 'Warm oranges that bring energy and optimism.',
+    category: 'retro-futurism',
     colorRules: [
       { name: 'Header background', selector: '.hl-header', property: 'background-color', value: '#7c2d12' },
       { name: 'Sidebar background', selector: '.hl-sidebar', property: 'background-color', value: '#431407' },
@@ -59,6 +64,7 @@ export const PRESET_THEMES: Theme[] = [
   preset({
     themeName: 'Emerald Forest',
     description: 'Grounded greens for a fresh, natural look.',
+    category: 'naturecore',
     colorRules: [
       { name: 'Header background', selector: '.hl-header', property: 'background-color', value: '#064e3b' },
       { name: 'Sidebar background', selector: '.hl-sidebar', property: 'background-color', value: '#022c22' },
@@ -76,6 +82,7 @@ export const PRESET_THEMES: Theme[] = [
   preset({
     themeName: 'Royal Purple',
     description: 'Rich violets with a confident, luxurious edge.',
+    category: 'spacecore',
     colorRules: [
       { name: 'Header background', selector: '.hl-header', property: 'background-color', value: '#4c1d95' },
       { name: 'Sidebar background', selector: '.hl-sidebar', property: 'background-color', value: '#2e1065' },
@@ -93,6 +100,7 @@ export const PRESET_THEMES: Theme[] = [
   preset({
     themeName: 'Slate Minimal',
     description: 'Clean, understated grays for a distraction-free UI.',
+    category: 'futuristic-techcore',
     colorRules: [
       { name: 'Header background', selector: '.hl-header', property: 'background-color', value: '#1e293b' },
       { name: 'Sidebar background', selector: '.hl-sidebar', property: 'background-color', value: '#0f172a' },
@@ -107,6 +115,7 @@ export const PRESET_THEMES: Theme[] = [
   preset({
     themeName: 'Glassmorphism Frost',
     description: 'Soft, airy neutrals with a frosted-glass feel.',
+    category: 'futuristic-techcore',
     colorRules: [
       { name: 'Header background', selector: '.hl-header', property: 'background-color', value: '#e2e8f0' },
       { name: 'Sidebar background', selector: '.hl-sidebar', property: 'background-color', value: '#f1f5f9' },
@@ -121,6 +130,7 @@ export const PRESET_THEMES: Theme[] = [
   preset({
     themeName: 'Cyberpunk Neon',
     description: 'Electric pinks and cyans for a bold, futuristic vibe.',
+    category: 'cyberpunk',
     colorRules: [
       { name: 'Header background', selector: '.hl-header', property: 'background-color', value: '#0d0221' },
       { name: 'Sidebar background', selector: '.hl-sidebar', property: 'background-color', value: '#030014' },
@@ -138,6 +148,7 @@ export const PRESET_THEMES: Theme[] = [
   preset({
     themeName: 'Golden Luxe',
     description: 'Black and gold for a high-end, exclusive feel.',
+    category: 'retro-futurism',
     colorRules: [
       { name: 'Header background', selector: '.hl-header', property: 'background-color', value: '#0a0a0a' },
       { name: 'Sidebar background', selector: '.hl-sidebar', property: 'background-color', value: '#000000' },
@@ -155,6 +166,7 @@ export const PRESET_THEMES: Theme[] = [
   preset({
     themeName: 'Coral Sunrise',
     description: 'Playful pinks and corals with a friendly energy.',
+    category: 'vaporwave',
     colorRules: [
       { name: 'Header background', selector: '.hl-header', property: 'background-color', value: '#9d174d' },
       { name: 'Sidebar background', selector: '.hl-sidebar', property: 'background-color', value: '#500724' },
@@ -169,4 +181,209 @@ export const PRESET_THEMES: Theme[] = [
     borderRadius: '12px',
     shadowIntensity: 'sm',
   }),
+  preset({
+    themeName: 'Neon Grid',
+    description: 'Retro synth sunset grid — purple night sky, hot pink and cyan glow.',
+    category: 'synthwave',
+    colorRules: [
+      { name: 'Header background', selector: '.hl-header', property: 'background-color', value: '#2d1b4e' },
+      { name: 'Sidebar background', selector: '.hl-sidebar', property: 'background-color', value: '#1a0f2e' },
+      { name: 'Primary button', selector: '.hl-btn-primary', property: 'background-color', value: '#ff2e88' },
+      { name: 'Link color', selector: '.hl-link', property: 'color', value: '#00f0ff' },
+    ],
+    gradients: [
+      { target: 'header', from: '#4c2a86', to: '#1a0f2e', angle: 135 },
+      { target: 'button', from: '#ff2e88', to: '#00f0ff', angle: 90 },
+    ],
+    fonts: { heading: 'Poppins', body: 'Inter' },
+    borderRadius: '4px',
+    shadowIntensity: 'lg',
+  }),
+  preset({
+    themeName: 'Holographic Chrome',
+    description: 'Y2K chrome and frosted pastels with a holographic pink-cyan sheen.',
+    category: 'y2k',
+    colorRules: [
+      { name: 'Header background', selector: '.hl-header', property: 'background-color', value: '#e0e0e8' },
+      { name: 'Sidebar background', selector: '.hl-sidebar', property: 'background-color', value: '#c9c9d6' },
+      { name: 'Primary button', selector: '.hl-btn-primary', property: 'background-color', value: '#ff71ce' },
+      { name: 'Link color', selector: '.hl-link', property: 'color', value: '#01cdfe' },
+    ],
+    gradients: [
+      { target: 'header', from: '#f7f7ff', to: '#d9d9f5', angle: 120 },
+      { target: 'button', from: '#ff71ce', to: '#b967ff', angle: 120 },
+    ],
+    fonts: { heading: 'Poppins', body: 'Inter' },
+    borderRadius: '18px',
+    shadowIntensity: 'lg',
+  }),
+  preset({
+    themeName: 'Signal Break',
+    description: 'High-contrast glitch aesthetic — stark black and white with a red/cyan offset.',
+    category: 'glitchcore',
+    colorRules: [
+      { name: 'Header background', selector: '.hl-header', property: 'background-color', value: '#050505' },
+      { name: 'Sidebar background', selector: '.hl-sidebar', property: 'background-color', value: '#000000' },
+      { name: 'Primary button', selector: '.hl-btn-primary', property: 'background-color', value: '#ff0040' },
+      { name: 'Link color', selector: '.hl-link', property: 'color', value: '#00fff9' },
+    ],
+    gradients: [{ target: 'button', from: '#00fff9', to: '#ff0040', angle: 90 }],
+    fonts: { heading: 'Inter', body: 'Inter' },
+    borderRadius: '2px',
+    shadowIntensity: 'none',
+  }),
+  preset({
+    themeName: 'Nebula Drift',
+    description: 'Deep cosmic navy with a violet-to-pink nebula glow.',
+    category: 'spacecore',
+    colorRules: [
+      { name: 'Header background', selector: '.hl-header', property: 'background-color', value: '#05010f' },
+      { name: 'Sidebar background', selector: '.hl-sidebar', property: 'background-color', value: '#0a0420' },
+      { name: 'Primary button', selector: '.hl-btn-primary', property: 'background-color', value: '#6f42c1' },
+      { name: 'Link color', selector: '.hl-link', property: 'color', value: '#8ecae6' },
+    ],
+    gradients: [
+      { target: 'header', from: '#1b0a3d', to: '#05010f', angle: 180 },
+      { target: 'button', from: '#ff9de2', to: '#6f42c1', angle: 135 },
+    ],
+    fonts: { heading: 'Poppins', body: 'Inter' },
+    borderRadius: '10px',
+    shadowIntensity: 'lg',
+  }),
+  preset({
+    themeName: 'Mossy Hollow',
+    description: 'Whimsical, mossy greens and mushroom tans for an earthy, cottagecore feel.',
+    category: 'goblincore',
+    colorRules: [
+      { name: 'Header background', selector: '.hl-header', property: 'background-color', value: '#1b2a1a' },
+      { name: 'Sidebar background', selector: '.hl-sidebar', property: 'background-color', value: '#142013' },
+      { name: 'Primary button', selector: '.hl-btn-primary', property: 'background-color', value: '#556b2f' },
+      { name: 'Link color', selector: '.hl-link', property: 'color', value: '#c9a66b' },
+    ],
+    gradients: [
+      { target: 'header', from: '#2f3e26', to: '#142013', angle: 135 },
+      { target: 'button', from: '#8a9a5b', to: '#556b2f', angle: 135 },
+    ],
+    fonts: { heading: 'Inter', body: 'Inter' },
+    borderRadius: '8px',
+    shadowIntensity: 'sm',
+  }),
+  preset({
+    themeName: 'Neon Alley',
+    description: 'Rain-slicked night streets — electric purple and acid green.',
+    category: 'cyberpunk',
+    colorRules: [
+      { name: 'Header background', selector: '.hl-header', property: 'background-color', value: '#12082e' },
+      { name: 'Sidebar background', selector: '.hl-sidebar', property: 'background-color', value: '#08041a' },
+      { name: 'Primary button', selector: '.hl-btn-primary', property: 'background-color', value: '#7b2ff7' },
+      { name: 'Link color', selector: '.hl-link', property: 'color', value: '#39ff14' },
+    ],
+    gradients: [
+      { target: 'header', from: '#2d1466', to: '#08041a', angle: 135 },
+      { target: 'button', from: '#39ff14', to: '#7b2ff7', angle: 90 },
+    ],
+    fonts: { heading: 'Poppins', body: 'Inter' },
+    borderRadius: '6px',
+    shadowIntensity: 'lg',
+  }),
+  preset({
+    themeName: 'Retrowave Sunset',
+    description: 'Sunset orange and hot pink over a deep purple sky.',
+    category: 'synthwave',
+    colorRules: [
+      { name: 'Header background', selector: '.hl-header', property: 'background-color', value: '#3b0764' },
+      { name: 'Sidebar background', selector: '.hl-sidebar', property: 'background-color', value: '#1e0a3c' },
+      { name: 'Primary button', selector: '.hl-btn-primary', property: 'background-color', value: '#fb5607' },
+      { name: 'Link color', selector: '.hl-link', property: 'color', value: '#ffbe0b' },
+    ],
+    gradients: [
+      { target: 'header', from: '#3b0764', to: '#ff006e', angle: 135 },
+      { target: 'button', from: '#fb5607', to: '#ffbe0b', angle: 90 },
+    ],
+    fonts: { heading: 'Poppins', body: 'Inter' },
+    borderRadius: '4px',
+    shadowIntensity: 'lg',
+  }),
+  preset({
+    themeName: 'Pastel Dreams',
+    description: 'Soft lavender, mint, and cotton-candy pink.',
+    category: 'vaporwave',
+    colorRules: [
+      { name: 'Header background', selector: '.hl-header', property: 'background-color', value: '#ffd6ff' },
+      { name: 'Sidebar background', selector: '.hl-sidebar', property: 'background-color', value: '#c8b6ff' },
+      { name: 'Primary button', selector: '.hl-btn-primary', property: 'background-color', value: '#b8c0ff' },
+      { name: 'Link color', selector: '.hl-link', property: 'color', value: '#0f766e' },
+    ],
+    gradients: [
+      { target: 'header', from: '#ffd6ff', to: '#c8b6ff', angle: 120 },
+      { target: 'button', from: '#b8c0ff', to: '#80ffdb', angle: 120 },
+    ],
+    fonts: { heading: 'Poppins', body: 'Inter' },
+    borderRadius: '20px',
+    shadowIntensity: 'sm',
+  }),
+  preset({
+    themeName: 'Metallic Blue',
+    description: 'Brushed chrome and electric blue with a liquid-metal sheen.',
+    category: 'y2k',
+    colorRules: [
+      { name: 'Header background', selector: '.hl-header', property: 'background-color', value: '#c0c0c8' },
+      { name: 'Sidebar background', selector: '.hl-sidebar', property: 'background-color', value: '#9a9ab2' },
+      { name: 'Primary button', selector: '.hl-btn-primary', property: 'background-color', value: '#4cc9f0' },
+      { name: 'Link color', selector: '.hl-link', property: 'color', value: '#4361ee' },
+    ],
+    gradients: [
+      { target: 'header', from: '#e0e0e8', to: '#8d99ae', angle: 120 },
+      { target: 'button', from: '#4cc9f0', to: '#4361ee', angle: 120 },
+    ],
+    fonts: { heading: 'Poppins', body: 'Inter' },
+    borderRadius: '14px',
+    shadowIntensity: 'md',
+  }),
+  preset({
+    themeName: 'Static Noise',
+    description: 'Grayscale glitch with a matrix-green flicker.',
+    category: 'glitchcore',
+    colorRules: [
+      { name: 'Header background', selector: '.hl-header', property: 'background-color', value: '#0a0a0a' },
+      { name: 'Sidebar background', selector: '.hl-sidebar', property: 'background-color', value: '#000000' },
+      { name: 'Primary button', selector: '.hl-btn-primary', property: 'background-color', value: '#39ff14' },
+      { name: 'Link color', selector: '.hl-link', property: 'color', value: '#e5e5e5' },
+    ],
+    gradients: [{ target: 'button', from: '#39ff14', to: '#0a0a0a', angle: 90 }],
+    fonts: { heading: 'Inter', body: 'Inter' },
+    borderRadius: '0px',
+    shadowIntensity: 'none',
+  }),
+  preset({
+    themeName: 'Toadstool Grove',
+    description: 'Damp bark browns with a mushroom-red glow.',
+    category: 'goblincore',
+    colorRules: [
+      { name: 'Header background', selector: '.hl-header', property: 'background-color', value: '#2b1d0e' },
+      { name: 'Sidebar background', selector: '.hl-sidebar', property: 'background-color', value: '#1a1108' },
+      { name: 'Primary button', selector: '.hl-btn-primary', property: 'background-color', value: '#a0522d' },
+      { name: 'Link color', selector: '.hl-link', property: 'color', value: '#e07a5f' },
+    ],
+    gradients: [
+      { target: 'header', from: '#402c17', to: '#1a1108', angle: 135 },
+      { target: 'button', from: '#e07a5f', to: '#a0522d', angle: 135 },
+    ],
+    fonts: { heading: 'Inter', body: 'Inter' },
+    borderRadius: '10px',
+    shadowIntensity: 'sm',
+  }),
+];
+
+export const THEME_CATEGORIES: { key: ThemeCategory; label: string; accent: string }[] = [
+  { key: 'cyberpunk', label: 'Cyberpunk', accent: '#ff2079' },
+  { key: 'synthwave', label: 'Synthwave', accent: '#ff2e88' },
+  { key: 'vaporwave', label: 'Vaporwave', accent: '#f43f5e' },
+  { key: 'y2k', label: 'Y2K', accent: '#ff71ce' },
+  { key: 'glitchcore', label: 'Glitchcore', accent: '#ff0040' },
+  { key: 'futuristic-techcore', label: 'Futuristic Techcore', accent: '#334155' },
+  { key: 'spacecore', label: 'Spacecore', accent: '#6f42c1' },
+  { key: 'retro-futurism', label: 'Retro Futurism', accent: '#ea580c' },
+  { key: 'naturecore', label: 'Naturecore', accent: '#059669' },
+  { key: 'goblincore', label: 'Goblincore', accent: '#556b2f' },
 ];
