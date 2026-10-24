@@ -6,6 +6,7 @@ import { Company } from '../models/Company';
 import { ConversationStyle } from '../models/ConversationStyle';
 import { CustomFieldCampaign } from '../models/CustomFieldCampaign';
 import { DynamicLink } from '../models/DynamicLink';
+import { FeedbackConfig } from '../models/Feedback';
 import { FloatingButton } from '../models/FloatingButton';
 import { InjectedButton } from '../models/InjectedButton';
 import { LaunchpadTile } from '../models/LaunchpadTile';
@@ -14,6 +15,7 @@ import { LogoCampaign } from '../models/LogoCampaign';
 import { MenuEdit } from '../models/MenuEdit';
 import { MiscSettings } from '../models/MiscSettings';
 import { SpecialTheme } from '../models/SpecialTheme';
+import { GuideSettings, Tour } from '../models/Tour';
 import { Theme } from '../models/Theme';
 import { findScoped, ScopedDoc } from '../utils/scope';
 import { buildConversationCss, buildThemeCss, themeFontUrls } from './css';
@@ -238,6 +240,84 @@ const resolveUserLinks: Resolver = async (companyId, groupId, ctx) => {
   // so that adding or removing one shows up immediately rather than after the config cache.
   if (!misc?.userLinks?.enabled || !ctx.locationId) return DISABLED;
   return { enabled: true, maxLinks: misc.userLinks.maxLinks };
+};
+
+const resolveGuides: Resolver = async (companyId, groupId) => {
+  const [settings, tours] = await Promise.all([
+    findScoped(GuideSettings, companyId, groupId),
+    findScopedList(Tour, companyId, groupId, { enabled: true }, { order: 1, createdAt: 1 }),
+  ]);
+  if (tours.length === 0 || settings?.enabled === false) return DISABLED;
+  // Tours work as soon as one exists: without saved button settings the defaults apply.
+  const b = settings ?? new GuideSettings({ companyId, groupId });
+  return {
+    enabled: true,
+    button: {
+      text: b.buttonText,
+      icon: b.icon,
+      placement: b.placement,
+      backgroundColor: b.backgroundColor,
+      textColor: b.textColor,
+      borderRadius: b.borderRadius,
+      size: b.size,
+      shadow: b.shadow,
+    },
+    tours: tours.map((t) => ({
+      id: String(t._id),
+      name: t.name,
+      pages: [...t.pages],
+      autoStart: t.autoStart,
+      // Changes whenever the tour is edited, so "seen it already" resets for a revised tour.
+      version: t.updatedAt.getTime(),
+      permissions: t.permissions,
+      steps: t.steps.map((s) => ({
+        title: s.title,
+        content: s.content,
+        selector: s.selector,
+        clickSelector: s.clickSelector,
+        placement: s.placement,
+        mediaType: s.mediaType,
+        mediaUrl: s.mediaUrl,
+        ctaLabel: s.ctaLabel,
+        ctaUrl: s.ctaUrl,
+      })),
+    })),
+  };
+};
+
+const resolveFeedback: Resolver = async (companyId, groupId) => {
+  const cfg = await findScoped(FeedbackConfig, companyId, groupId);
+  if (!cfg || (!cfg.enabled && !cfg.cancel.enabled)) return DISABLED;
+  return {
+    enabled: true,
+    rating: {
+      enabled: cfg.enabled,
+      ratingType: cfg.ratingType,
+      buttonText: cfg.buttonText,
+      icon: cfg.icon,
+      placement: cfg.placement,
+      backgroundColor: cfg.backgroundColor,
+      textColor: cfg.textColor,
+      title: cfg.title,
+      commentMode: cfg.commentMode,
+      commentPlaceholder: cfg.commentPlaceholder,
+      thanksMessage: cfg.thanksMessage,
+      cooldownHours: cfg.cooldownHours,
+      draggable: cfg.draggable,
+    },
+    // The chat window reads this to offer a rating when a chat ends.
+    askAfterChat: cfg.enabled && cfg.askAfterChat,
+    cancel: cfg.cancel.enabled
+      ? {
+          required: cfg.cancel.required,
+          title: cfg.cancel.title,
+          message: cfg.cancel.message,
+          reasons: [...cfg.cancel.reasons],
+          commentPlaceholder: cfg.cancel.commentPlaceholder,
+        }
+      : null,
+    version: cfg.updatedAt.getTime(),
+  };
 };
 
 const resolveBookACall: Resolver = async (companyId, groupId) => {
@@ -494,6 +574,8 @@ export const RUNTIME_FEATURES = {
   'opportunity-tabs': resolveOpportunityTabs,
   'floating-buttons': resolveFloatingButtons,
   launchpad: resolveLaunchpad,
+  guides: resolveGuides,
+  feedback: resolveFeedback,
   'user-links': resolveUserLinks,
   'book-a-call': resolveBookACall,
   'dynamic-links': resolveDynamicLinks,

@@ -21,6 +21,7 @@ import { getUnreadCount, LOCATION_ID } from '../../runtime/unread';
 import { findScoped, resolveGroupId } from '../../utils/scope';
 import { buildRouter, RouteDef } from '../routeTable';
 import { chatRoutes } from './chatRoutes';
+import { feedbackRoutes } from './feedbackRoutes';
 import { apiBase, locationContext, resolveCompanyId } from './common';
 
 /**
@@ -71,6 +72,7 @@ const jsonBody = express.json({ limit: '10kb' });
 
 const runtimeRoutes: RouteDef[] = [
   ...chatRoutes,
+  ...feedbackRoutes,
   {
     // The links users of a location created for themselves (public, like the rest of the runtime).
     method: 'get',
