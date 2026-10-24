@@ -49,6 +49,9 @@ const ContactButtonPage = lazy(() =>
     default: m.ContactButtonPage,
   })),
 );
+const LaunchpadPage = lazy(() =>
+  import('../pages/customizer/button-builder/LaunchpadPage').then((m) => ({ default: m.LaunchpadPage })),
+);
 const OpportunityTabsPage = lazy(() =>
   import('../pages/customizer/button-builder/OpportunityTabsPage').then((m) => ({
     default: m.OpportunityTabsPage,
@@ -166,6 +169,7 @@ export const routes: RouteObject[] = [
       { path: '/miaghlcustomizer/buttons/contact', element: lazyPage(<ContactButtonPage />) },
       { path: '/miaghlcustomizer/buttons/opportunity', element: lazyPage(<OpportunityButtonPage />) },
       { path: '/miaghlcustomizer/buttons/opportunity-tabs', element: lazyPage(<OpportunityTabsPage />) },
+      { path: '/miaghlcustomizer/buttons/launchpad', element: lazyPage(<LaunchpadPage />) },
       { path: '/miaghlcustomizer/buttons/dashboard', element: lazyPage(<DashboardButtonPage />) },
       { path: '/miaghlcustomizer/buttons/bottom', element: lazyPage(<FloatingBottomButtonPage />) },
       { path: '/miaghlcustomizer/buttons/book-a-call', element: lazyPage(<BookACallPage />) },

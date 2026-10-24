@@ -13,6 +13,7 @@ import { CustomFieldCampaign, CustomFieldCampaignInput } from '../types/customFi
 import { Banner, BannerInput } from '../types/banner';
 import { ChatBubbleConfig } from '../types/chatBubble';
 import { LoaderConfig } from '../types/loader';
+import { LaunchpadTile, LaunchpadTileInput } from '../types/launchpad';
 import { MiscSettings } from '../types/miscSettings';
 import { BookACallConfig } from '../types/bookACall';
 import { ConversationStyleConfig, emptyConversationStyle } from '../types/conversationStyle';
@@ -403,6 +404,25 @@ let bookACall: BookACallConfig = {
 
 let conversationStyle: ConversationStyleConfig = emptyConversationStyle;
 
+let launchpadTiles: LaunchpadTile[] = [
+  {
+    _id: 'lp-1',
+    companyId: MOCK_COMPANY_ID,
+    groupId: MOCK_GROUP_ID,
+    order: 0,
+    kind: 'custom',
+    nativeId: '',
+    description: 'Watch the 3-minute welcome video',
+    imageUrl: '',
+    buttonText: 'Watch now',
+    url: 'https://miaghl.com/welcome?loc={{location.id}}',
+    openMode: 'modal',
+    hidden: false,
+    createdAt: '2026-09-01T10:00:00.000Z',
+    updatedAt: '2026-09-01T10:00:00.000Z',
+  },
+];
+
 let miscSettings: MiscSettings = {
   tooltip: { enabled: true, buttonText: 'Need help?', placement: 'bottom-right' },
   addonBanner: {
@@ -666,6 +686,34 @@ export const mockAdapter = async (
     return respond(config, { menuEdit });
   }
 
+  if (method === 'get' && path === '/launchpad') {
+    return respond(config, { tiles: launchpadTiles });
+  }
+  if (method === 'post' && path === '/launchpad') {
+    const tile: LaunchpadTile = {
+      _id: nextId('lp'),
+      companyId: MOCK_COMPANY_ID,
+      groupId: MOCK_GROUP_ID,
+      ...(body as LaunchpadTileInput),
+      createdAt: nowIso(),
+      updatedAt: nowIso(),
+    };
+    launchpadTiles = [...launchpadTiles, tile];
+    return respond(config, { tile }, 201);
+  }
+  if (method === 'put' && path.startsWith('/launchpad/')) {
+    const id = path.slice('/launchpad/'.length);
+    launchpadTiles = launchpadTiles.map((t) =>
+      t._id === id ? { ...t, ...(body as LaunchpadTileInput), updatedAt: nowIso() } : t,
+    );
+    return respond(config, { tile: launchpadTiles.find((t) => t._id === id) });
+  }
+  if (method === 'delete' && path.startsWith('/launchpad/')) {
+    const id = path.slice('/launchpad/'.length);
+    launchpadTiles = launchpadTiles.filter((t) => t._id !== id);
+    return respond(config, null, 204);
+  }
+
   if (method === 'get' && path === '/custom-fields') {
     return respond(config, { campaigns: customFieldCampaigns });
   }
@@ -809,6 +857,7 @@ export const mockAdapter = async (
         'unread-badge': { enabled: miscSettings.unreadBadge.enabled && company.hasGhlApiToken },
         'custom-fields': { enabled: customFieldCampaigns.length > 0 },
         'opportunity-tabs': { enabled: buttons.some((b) => b.surface === 'opportunity-tab') },
+        launchpad: { enabled: launchpadTiles.length > 0 },
       },
     });
   }

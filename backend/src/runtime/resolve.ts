@@ -8,6 +8,7 @@ import { CustomFieldCampaign } from '../models/CustomFieldCampaign';
 import { DynamicLink } from '../models/DynamicLink';
 import { FloatingButton } from '../models/FloatingButton';
 import { InjectedButton } from '../models/InjectedButton';
+import { LaunchpadTile } from '../models/LaunchpadTile';
 import { LoaderConfig } from '../models/LoaderConfig';
 import { LogoCampaign } from '../models/LogoCampaign';
 import { MenuEdit } from '../models/MenuEdit';
@@ -192,6 +193,25 @@ const resolveFloatingButtons: Resolver = async (companyId, groupId) => {
       shadow: b.shadow,
       animation: b.animation,
       subItems: b.subItems.map((s) => ({ label: s.label, url: s.url })),
+    })),
+  };
+};
+
+const resolveLaunchpad: Resolver = async (companyId, groupId) => {
+  const tiles = await findScopedList(LaunchpadTile, companyId, groupId, {}, { order: 1, createdAt: 1 });
+  if (tiles.length === 0) return DISABLED;
+  return {
+    enabled: true,
+    items: tiles.map((t) => ({
+      id: String(t._id),
+      kind: t.kind,
+      nativeId: t.nativeId,
+      description: t.description,
+      imageUrl: t.imageUrl,
+      buttonText: t.buttonText,
+      url: t.url,
+      openMode: t.openMode,
+      hidden: t.hidden,
     })),
   };
 };
@@ -412,6 +432,7 @@ export const RUNTIME_FEATURES = {
   buttons: resolveButtons,
   'opportunity-tabs': resolveOpportunityTabs,
   'floating-buttons': resolveFloatingButtons,
+  launchpad: resolveLaunchpad,
   'book-a-call': resolveBookACall,
   'dynamic-links': resolveDynamicLinks,
   menu: resolveMenu,

@@ -24,6 +24,7 @@ const FEATURE_LABELS: Record<string, string> = {
   'unread-badge': 'Unread conversations badge',
   'custom-fields': 'Custom field locks',
   'opportunity-tabs': 'Opportunity tabs',
+  launchpad: 'Launchpad tiles',
 };
 
 async function copy(text: string) {

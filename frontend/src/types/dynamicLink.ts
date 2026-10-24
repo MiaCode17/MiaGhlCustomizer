@@ -1,4 +1,4 @@
-export type DynamicLinkOpenMode = 'same-tab' | 'new-tab' | 'modal';
+export type DynamicLinkOpenMode = 'same-tab' | 'new-tab' | 'modal' | 'drawer';
 export type DynamicLinkRoleTarget = 'all' | 'owner' | 'admin';
 
 export interface DynamicLink {

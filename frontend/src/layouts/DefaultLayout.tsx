@@ -56,6 +56,7 @@ const NAV_ITEMS: NavItem[] = [
       { key: '/miaghlcustomizer/buttons/contact', label: 'Contact' },
       { key: '/miaghlcustomizer/buttons/opportunity', label: 'Opportunity' },
       { key: '/miaghlcustomizer/buttons/opportunity-tabs', label: 'Opportunity Tabs' },
+      { key: '/miaghlcustomizer/buttons/launchpad', label: 'Launchpad' },
       { key: '/miaghlcustomizer/buttons/dashboard', label: 'Dashboard' },
       { key: '/miaghlcustomizer/buttons/bottom', label: 'Bottom' },
       { key: '/miaghlcustomizer/buttons/book-a-call', label: 'Book a Call' },
