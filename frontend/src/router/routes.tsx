@@ -108,6 +108,9 @@ const CustomFieldsPage = lazy(() =>
 const BannersPage = lazy(() =>
   import('../pages/customizer/banners/BannersPage').then((m) => ({ default: m.BannersPage })),
 );
+const HeroBannersPage = lazy(() =>
+  import('../pages/customizer/banners/HeroBannersPage').then((m) => ({ default: m.HeroBannersPage })),
+);
 const ChatBubblePage = lazy(() =>
   import('../pages/customizer/chat-bubble/ChatBubblePage').then((m) => ({
     default: m.ChatBubblePage,
@@ -206,6 +209,7 @@ export const routes: RouteObject[] = [
       { path: '/miaghlcustomizer/engagement/feedback', element: lazyPage(<FeedbackSettingsPage />) },
       { path: '/miaghlcustomizer/engagement/feedback-responses', element: lazyPage(<FeedbackResponsesPage />) },
       { path: '/miaghlcustomizer/engagement/loader', element: lazyPage(<LoaderPage />) },
+      { path: '/miaghlcustomizer/engagement/hero-banners', element: lazyPage(<HeroBannersPage />) },
       { path: '/miaghlcustomizer/engagement/banners', element: lazyPage(<BannersPage />) },
       {
         path: '/miaghlcustomizer/engagement/conversations',

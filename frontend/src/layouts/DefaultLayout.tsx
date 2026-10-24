@@ -87,6 +87,7 @@ const NAV_ITEMS: NavItem[] = [
       { key: '/miaghlcustomizer/engagement/feedback-responses', label: 'Feedback Responses' },
       { key: '/miaghlcustomizer/engagement/loader', label: 'Loader' },
       { key: '/miaghlcustomizer/engagement/banners', label: 'Banners' },
+      { key: '/miaghlcustomizer/engagement/hero-banners', label: 'Hero Banners' },
       { key: '/miaghlcustomizer/engagement/conversations', label: 'Conversation Customization' },
     ],
   },

@@ -36,6 +36,9 @@ export const GHL_SELECTORS = {
   pageContent: '.hl_wrapper--inner, .hl_wrapper, #app main',
 
   // Page-level button placements (matched together with a route pattern in the script)
+  // The dashboard page: hero banners go into its main content, above or below the first block.
+  dashboardRoot: '#location-dashboard',
+  dashboardMain: '#location_dashboard-main-content',
   dashboardToolbar: '.location-dashboard_header, #location-dashboard .dashboard-header, .hl_wrapper--inner',
   contactToolbar:
     '.flex.flex-row.justify-start.items-center.topmenu-nav, .hl_contact-details-left .hl_contact-details-header, .hl_wrapper--inner',

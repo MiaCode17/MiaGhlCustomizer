@@ -12,6 +12,7 @@ import { allRoles, MenuEdit } from '../types/menuEdit';
 import { CustomFieldCampaign, CustomFieldCampaignInput } from '../types/customField';
 import { Banner, BannerInput } from '../types/banner';
 import { ChatBubbleConfig, emptyChatBubbleConfig } from '../types/chatBubble';
+import { emptyHeroBanner, HeroBanner, HeroBannerInput } from '../types/heroBanner';
 import type { PremiumThemeSettings } from './premiumThemeService';
 import { FeedbackConfig, FeedbackResponse, FeedbackStats, emptyFeedbackConfig } from '../types/feedback';
 import { GuideSettings, Tour, TourInput, emptyGuideSettings } from '../types/guide';
@@ -106,6 +107,18 @@ let theme: Theme = {
 };
 
 let premiumTheme: PremiumThemeSettings | null = null;
+
+let heroBanners: HeroBanner[] = [
+  {
+    ...emptyHeroBanner,
+    _id: 'hero-1',
+    companyId: MOCK_COMPANY_ID,
+    groupId: '',
+    name: 'Welcome banner',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+];
 
 let specialTheme: SpecialTheme = {
   enabled: true,
@@ -629,6 +642,25 @@ export const mockAdapter = async (
     return respond(config, { theme });
   }
 
+  if (method === 'get' && path === '/hero-banners') {
+    return respond(config, { banners: heroBanners });
+  }
+  if (method === 'post' && path === '/hero-banners') {
+    const banner: HeroBanner = { _id: nextId('hero'), companyId: MOCK_COMPANY_ID, groupId: '', ...(body as HeroBannerInput), createdAt: nowIso(), updatedAt: nowIso() };
+    heroBanners = [...heroBanners, banner];
+    return respond(config, { banner }, 201);
+  }
+  if (method === 'put' && path.startsWith('/hero-banners/')) {
+    const id = path.slice('/hero-banners/'.length);
+    heroBanners = heroBanners.map((b) => (b._id === id ? { ...b, ...(body as HeroBannerInput), updatedAt: nowIso() } : b));
+    return respond(config, { banner: heroBanners.find((b) => b._id === id) });
+  }
+  if (method === 'delete' && path.startsWith('/hero-banners/')) {
+    const id = path.slice('/hero-banners/'.length);
+    heroBanners = heroBanners.filter((b) => b._id !== id);
+    return respond(config, null, 204);
+  }
+
   if (method === 'get' && path === '/premium-theme') {
     return respond(config, { premiumTheme });
   }
@@ -1070,6 +1102,7 @@ export const mockAdapter = async (
         'dynamic-links': on,
         menu: on,
         banners: on,
+        'hero-banners': { enabled: heroBanners.some((b) => b.enabled) },
         'chat-bubble': { enabled: chatBubble.enabled },
         loader: { enabled: loader.enabled },
         'conversation-style': { enabled: conversationStyle.enabled },

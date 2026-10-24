@@ -17,6 +17,7 @@ const FEATURE_LABELS: Record<string, string> = {
   'dynamic-links': 'Custom menu links',
   menu: 'Menu edits',
   banners: 'Banners',
+  'hero-banners': 'Hero banners',
   'chat-bubble': 'Chat bubble & live chat',
   loader: 'Loader',
   'conversation-style': 'Conversation style',

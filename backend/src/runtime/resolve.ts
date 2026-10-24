@@ -8,6 +8,7 @@ import { CustomFieldCampaign } from '../models/CustomFieldCampaign';
 import { DynamicLink } from '../models/DynamicLink';
 import { FeedbackConfig } from '../models/Feedback';
 import { FloatingButton } from '../models/FloatingButton';
+import { HeroBanner } from '../models/HeroBanner';
 import { InjectedButton } from '../models/InjectedButton';
 import { LaunchpadTile } from '../models/LaunchpadTile';
 import { LoaderConfig } from '../models/LoaderConfig';
@@ -433,6 +434,36 @@ const resolveBanners: Resolver = async (companyId, groupId) => {
   };
 };
 
+const resolveHeroBanners: Resolver = async (companyId, groupId) => {
+  const banners = await findScopedList(HeroBanner, companyId, groupId, { enabled: true }, { order: 1, createdAt: 1 });
+  if (banners.length === 0) return DISABLED;
+  return {
+    enabled: true,
+    items: banners.map((b) => ({
+      id: String(b._id),
+      kind: b.kind,
+      position: b.position,
+      slides: b.slides,
+      slider: b.slider,
+      sizeMode: b.sizeMode,
+      height: b.height,
+      widthPercent: b.widthPercent,
+      borderRadius: b.borderRadius,
+      marginTop: b.marginTop,
+      marginBottom: b.marginBottom,
+      padY: b.padY,
+      padX: b.padX,
+      mobilePadX: b.mobilePadX,
+      titleSize: b.titleSize,
+      subtitleSize: b.subtitleSize,
+      descriptionSize: b.descriptionSize,
+      animation: b.animation,
+      closable: b.closable,
+      version: b.updatedAt.getTime(),
+    })),
+  };
+};
+
 const resolveChatBubble: Resolver = async (companyId, groupId) => {
   const cfg = await findScoped(ChatBubbleConfig, companyId, groupId);
   if (!cfg?.enabled) return DISABLED;
@@ -598,6 +629,7 @@ export const RUNTIME_FEATURES = {
   'dynamic-links': resolveDynamicLinks,
   menu: resolveMenu,
   banners: resolveBanners,
+  'hero-banners': resolveHeroBanners,
   'chat-bubble': resolveChatBubble,
   loader: resolveLoader,
   'conversation-style': resolveConversationStyle,
