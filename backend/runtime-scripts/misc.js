@@ -21,7 +21,8 @@
   function tooltip(cfg) {
     var pos = Object.assign({}, CORNERS[cfg.placement] || CORNERS['bottom-right']);
     // Sit above the chat launcher / Book-a-Call pill when sharing their corner.
-    if (cfg.placement === 'bottom-right' && C.active['chat-bubble']) pos.bottom = '88px';
+    var chat = C.layout && C.layout.chatBubble;
+    if (chat && cfg.placement === 'bottom-' + chat.side) pos.bottom = chat.top + 12 + 'px';
     if (cfg.placement === 'bottom-left' && C.active['book-a-call']) pos.bottom = '68px';
 
     var btn = C.h('button', {
