@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
+  Alert,
   Button,
   Card,
   Form,
@@ -11,7 +12,9 @@ import {
   Typography,
   message,
 } from 'antd';
+import { Link } from 'react-router-dom';
 import { SettingOutlined } from '@ant-design/icons';
+import { useCompany } from '../../../context/CompanyContext';
 import { PageIntro } from '../../../components/PageIntro';
 import { miscSettingsService } from '../../../services/miscSettingsService';
 import { emptyMiscSettings, MiscSettings } from '../../../types/miscSettings';
@@ -29,7 +32,14 @@ const ADDON_BANNER_PLACEMENT_OPTIONS = [
   { value: 'dashboard', label: 'Dashboard' },
 ];
 
+const MEMBERSHIP_OPEN_MODE_OPTIONS = [
+  { value: 'modal', label: 'Pop-up window' },
+  { value: 'drawer', label: 'Side drawer' },
+  { value: 'new-tab', label: 'New tab' },
+];
+
 export function MiscSettingsPage() {
+  const { company } = useCompany();
   const [groupId, setGroupId] = useState<string | undefined>(undefined);
   const [settings, setSettings] = useState<MiscSettings>(emptyMiscSettings);
   const [loading, setLoading] = useState(true);
@@ -99,7 +109,7 @@ export function MiscSettingsPage() {
     <div className="pt-4">
       <PageIntro
         icon={<SettingOutlined />}
-        description="Fine-tune the help tooltip, add-on banner, membership gate, and unread badge."
+        description="Fine-tune the help tooltip, add-on banner, membership button, and unread badge."
         groupId={groupId}
         onGroupChange={setGroupId}
       />
@@ -206,8 +216,8 @@ export function MiscSettingsPage() {
           </Form>
         </Card>
 
-        <Card title="Membership / paywall gate" loading={loading}>
-          <Space align="center" style={{ marginBottom: 16 }}>
+        <Card title="Membership button" loading={loading}>
+          <Space align="center" style={{ marginBottom: 8 }}>
             <Switch
               checked={settings.membership.enabled}
               onChange={(enabled) =>
@@ -216,8 +226,89 @@ export function MiscSettingsPage() {
             />
             <Typography.Text>Enabled</Typography.Text>
           </Space>
+          <Typography.Paragraph type="secondary">
+            Adds a button to the top-right header of each sub-account that opens your membership or
+            client-portal page. The URL can use placeholders such as{' '}
+            <code>{'{{location.id}}'}</code>, <code>{'{{user.email}}'}</code> and{' '}
+            <code>{'{{user.id}}'}</code>.
+          </Typography.Paragraph>
           <Form layout="vertical">
-            <Form.Item label="Allowed location IDs">
+            <Space size="large" align="start" wrap>
+              <Form.Item label="Button label">
+                <Input
+                  style={{ width: 220 }}
+                  value={settings.membership.buttonLabel}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      membership: { ...settings.membership, buttonLabel: e.target.value },
+                    })
+                  }
+                />
+              </Form.Item>
+              <Form.Item label="Opens in">
+                <Select
+                  style={{ width: 160 }}
+                  value={settings.membership.openMode}
+                  options={MEMBERSHIP_OPEN_MODE_OPTIONS}
+                  onChange={(openMode) =>
+                    setSettings({ ...settings, membership: { ...settings.membership, openMode } })
+                  }
+                />
+              </Form.Item>
+              <Form.Item label="Icon (emoji or image URL)">
+                <Input
+                  style={{ width: 200 }}
+                  value={settings.membership.icon ?? ''}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      membership: { ...settings.membership, icon: e.target.value },
+                    })
+                  }
+                />
+              </Form.Item>
+              <Form.Item label="Background">
+                <input
+                  type="color"
+                  value={settings.membership.backgroundColor}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      membership: { ...settings.membership, backgroundColor: e.target.value },
+                    })
+                  }
+                />
+              </Form.Item>
+              <Form.Item label="Text">
+                <input
+                  type="color"
+                  value={settings.membership.textColor}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      membership: { ...settings.membership, textColor: e.target.value },
+                    })
+                  }
+                />
+              </Form.Item>
+            </Space>
+            <Form.Item label="Membership page URL" required>
+              <Input
+                value={settings.membership.url}
+                placeholder="https://portal.example.com/membership/{{location.id}}"
+                onChange={(e) =>
+                  setSettings({
+                    ...settings,
+                    membership: { ...settings.membership, url: e.target.value },
+                  })
+                }
+              />
+            </Form.Item>
+            <Form.Item
+              label="Only these location IDs"
+              extra="Leave empty to show the button in every location."
+            >
               <Space.Compact style={{ width: 360 }}>
                 <Input
                   value={locationIdDraft}
@@ -240,8 +331,8 @@ export function MiscSettingsPage() {
           </Form>
         </Card>
 
-        <Card title="Unread message badge" loading={loading}>
-          <Space align="center">
+        <Card title="Unread conversations badge" loading={loading}>
+          <Space align="center" style={{ marginBottom: 8 }}>
             <Switch
               checked={settings.unreadBadge.enabled}
               onChange={(enabled) =>
@@ -250,9 +341,39 @@ export function MiscSettingsPage() {
             />
             <Typography.Text>Enabled</Typography.Text>
           </Space>
-          <Typography.Paragraph type="secondary" style={{ marginTop: 8, marginBottom: 0 }}>
-            Shows a badge with the unread message count on the chat/inbox icon.
+          <Typography.Paragraph type="secondary">
+            Shows the number of unread conversations on the Conversations link in each
+            sub-account&apos;s sidebar. The count is read from GHL by our server (cached for a
+            minute), so it needs a GHL API token.
           </Typography.Paragraph>
+          {company && !company.hasGhlApiToken && (
+            <Alert
+              type="warning"
+              showIcon
+              style={{ marginBottom: 16 }}
+              message="No GHL API token saved yet"
+              description={
+                <>
+                  The badge stays off until you add one on the{' '}
+                  <Link to="/miaghlcustomizer/install">Install Script</Link> page.
+                </>
+              }
+            />
+          )}
+          <Form layout="vertical">
+            <Form.Item label="Badge color">
+              <input
+                type="color"
+                value={settings.unreadBadge.badgeColor}
+                onChange={(e) =>
+                  setSettings({
+                    ...settings,
+                    unreadBadge: { ...settings.unreadBadge, badgeColor: e.target.value },
+                  })
+                }
+              />
+            </Form.Item>
+          </Form>
         </Card>
 
         <div className="flex justify-end">

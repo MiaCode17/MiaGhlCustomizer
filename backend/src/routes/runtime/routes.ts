@@ -8,6 +8,7 @@ import { LoginPageConfig } from '../../models/LoginPageConfig';
 import { buildLoginCss } from '../../runtime/css';
 import { isRuntimeFeature, resolveAllFeatures, RUNTIME_FEATURES } from '../../runtime/resolve';
 import { buildEmbedScript, SCRIPT_FEATURES } from '../../runtime/scripts';
+import { getUnreadCount, LOCATION_ID } from '../../runtime/unread';
 import { findScoped, resolveGroupId } from '../../utils/scope';
 import { buildRouter, RouteDef } from '../routeTable';
 
@@ -61,7 +62,7 @@ const runtimeRoutes: RouteDef[] = [
     handler: asyncHandler(async (req, res) => {
       const companyId = await resolveCompanyId(req.query.company_id);
       const groupId = await resolveGroupId(companyId, locationContext(req));
-      const features = await resolveAllFeatures(companyId, groupId);
+      const features = await resolveAllFeatures(companyId, groupId, { locationId: locationContext(req).locationId });
       res.set('Cache-Control', 'public, max-age=30');
       res.json({ groupId, features });
     }),
@@ -76,9 +77,28 @@ const runtimeRoutes: RouteDef[] = [
       }
       const companyId = await resolveCompanyId(req.query.company_id);
       const groupId = await resolveGroupId(companyId, locationContext(req));
-      const config = await RUNTIME_FEATURES[feature](companyId, groupId);
+      const config = await RUNTIME_FEATURES[feature](companyId, groupId, {
+        locationId: locationContext(req).locationId,
+      });
       res.set('Cache-Control', 'public, max-age=30');
       res.json({ groupId, config });
+    }),
+  },
+  {
+    // Total unread conversations for a location, polled by the unread-badge script.
+    // Cached server-side, so many tabs/sub-accounts cost one upstream call per minute each.
+    method: 'get',
+    url: '/unread-count',
+    handler: asyncHandler(async (req, res) => {
+      const companyId = await resolveCompanyId(req.query.company_id);
+      const { locationId, planId } = locationContext(req);
+      if (!locationId || !LOCATION_ID.test(locationId)) {
+        throw new HttpError(400, 'A valid locationId is required');
+      }
+      const groupId = await resolveGroupId(companyId, { locationId, planId });
+      const result = await getUnreadCount(companyId, groupId, locationId);
+      res.set('Cache-Control', 'public, max-age=30');
+      res.json(result);
     }),
   },
   {

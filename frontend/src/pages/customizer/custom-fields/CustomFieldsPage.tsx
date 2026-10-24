@@ -1,18 +1,19 @@
 import { useEffect, useState } from 'react';
-import { Button, Card, Checkbox, Form, Input, Modal, Space, Table, message } from 'antd';
+import { Button, Card, Form, Input, Modal, Radio, Select, Space, Table, Tag, message } from 'antd';
 import { DeleteOutlined, EditOutlined, FormOutlined, PlusOutlined } from '@ant-design/icons';
 import { PageIntro } from '../../../components/PageIntro';
 import { customFieldsService } from '../../../services/customFieldsService';
-import { AVAILABLE_CUSTOM_FIELDS, CustomFieldCampaign } from '../../../types/customField';
+import { CustomFieldCampaign, CustomFieldMode, SUGGESTED_CUSTOM_FIELDS } from '../../../types/customField';
 
 interface CampaignFormState {
   id: string | null;
   name: string;
   exposedFieldKeys: string[];
+  mode: CustomFieldMode;
 }
 
 function emptyForm(): CampaignFormState {
-  return { id: null, name: '', exposedFieldKeys: [] };
+  return { id: null, name: '', exposedFieldKeys: [], mode: 'lock' };
 }
 
 export function CustomFieldsPage() {
@@ -43,7 +44,12 @@ export function CustomFieldsPage() {
   };
 
   const openEditModal = (campaign: CustomFieldCampaign) => {
-    setForm({ id: campaign._id, name: campaign.name, exposedFieldKeys: campaign.exposedFieldKeys });
+    setForm({
+      id: campaign._id,
+      name: campaign.name,
+      exposedFieldKeys: campaign.exposedFieldKeys,
+      mode: campaign.mode ?? 'lock',
+    });
     setModalOpen(true);
   };
 
@@ -64,7 +70,7 @@ export function CustomFieldsPage() {
     }
     setSaving(true);
     try {
-      const input = { name: form.name, exposedFieldKeys: form.exposedFieldKeys };
+      const input = { name: form.name, exposedFieldKeys: form.exposedFieldKeys, mode: form.mode };
       if (form.id) {
         await customFieldsService.update(form.id, input);
         message.success('Campaign updated');
@@ -85,7 +91,7 @@ export function CustomFieldsPage() {
     <div className="pt-4">
       <PageIntro
         icon={<FormOutlined />}
-        description="Choose which custom fields are exposed to each location via campaigns."
+        description="Lock or hide specific custom fields on contact and opportunity pages. A group's campaigns replace the global ones."
         groupId={groupId}
         onGroupChange={setGroupId}
       />
@@ -105,9 +111,21 @@ export function CustomFieldsPage() {
           columns={[
             { title: 'Name', dataIndex: 'name' },
             {
-              title: 'Exposed fields',
-              key: 'count',
-              render: (_, row) => row.exposedFieldKeys.length,
+              title: 'Action',
+              key: 'mode',
+              render: (_, row) =>
+                row.mode === 'hide' ? <Tag color="volcano">Hide</Tag> : <Tag color="blue">Lock (read-only)</Tag>,
+            },
+            {
+              title: 'Fields',
+              key: 'fields',
+              render: (_, row) => (
+                <Space size={[4, 4]} wrap>
+                  {row.exposedFieldKeys.map((key) => (
+                    <Tag key={key}>{key}</Tag>
+                  ))}
+                </Space>
+              ),
             },
             {
               title: '',
@@ -139,14 +157,31 @@ export function CustomFieldsPage() {
           <Form.Item label="Campaign name" required>
             <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
           </Form.Item>
-          <Form.Item label="Exposed fields">
-            <Checkbox.Group
+          <Form.Item
+            label="What should happen to these fields?"
+            extra="Lock keeps the field visible but read-only. Hide removes it from the page."
+          >
+            <Radio.Group
+              value={form.mode}
+              onChange={(e) => setForm({ ...form, mode: e.target.value as CustomFieldMode })}
+              options={[
+                { value: 'lock', label: 'Lock (read-only)' },
+                { value: 'hide', label: 'Hide' },
+              ]}
+              optionType="button"
+            />
+          </Form.Item>
+          <Form.Item
+            label="Fields"
+            extra="Type a GHL field key (for example lead_source or contact.lead_source) and press Enter."
+          >
+            <Select
+              mode="tags"
               value={form.exposedFieldKeys}
-              onChange={(exposedFieldKeys) =>
-                setForm({ ...form, exposedFieldKeys: exposedFieldKeys as string[] })
-              }
-              options={AVAILABLE_CUSTOM_FIELDS.map((field) => ({ value: field, label: field }))}
-              style={{ display: 'flex', flexDirection: 'column', gap: 8 }}
+              onChange={(exposedFieldKeys) => setForm({ ...form, exposedFieldKeys })}
+              options={SUGGESTED_CUSTOM_FIELDS.map((field) => ({ value: field, label: field }))}
+              tokenSeparators={[',', ' ']}
+              placeholder="Add field keys"
             />
           </Form.Item>
         </Form>

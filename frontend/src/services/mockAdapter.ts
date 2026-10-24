@@ -72,6 +72,7 @@ let company: Company = {
   id: MOCK_COMPANY_ID,
   name: 'Mia GHL',
   ghlCompanyId: '',
+  hasGhlApiToken: false,
 };
 
 // Mock mode starts already "logged in" so the UI preview isn't gated behind
@@ -317,8 +318,8 @@ let menuEdit: MenuEdit = {
 };
 
 const customFieldCampaigns: CustomFieldCampaign[] = [
-  { _id: 'cf-1', name: 'Sales Enablement', exposedFieldKeys: ['contact.lead_source', 'opportunity.close_probability'] },
-  { _id: 'cf-2', name: 'Onboarding', exposedFieldKeys: ['contact.company_size', 'contact.timezone'] },
+  { _id: 'cf-1', name: 'Sales Enablement', exposedFieldKeys: ['contact.lead_source', 'opportunity.close_probability'], mode: 'lock' },
+  { _id: 'cf-2', name: 'Onboarding', exposedFieldKeys: ['contact.company_size', 'contact.timezone'], mode: 'hide' },
 ];
 
 const banners: Banner[] = [
@@ -388,8 +389,17 @@ let miscSettings: MiscSettings = {
     message: 'Unlock premium automation add-ons for your agency.',
     ctaUrl: 'https://miaghl.com/addons',
   },
-  membership: { enabled: true, allowedLocationIds: ['loc-1001', 'loc-1002'] },
-  unreadBadge: { enabled: true },
+  membership: {
+    enabled: true,
+    allowedLocationIds: ['loc-1001', 'loc-1002'],
+    buttonLabel: 'My Membership',
+    url: 'https://miaghl.com/membership/{{location.id}}',
+    openMode: 'modal',
+    icon: undefined,
+    backgroundColor: '#4f46e5',
+    textColor: '#ffffff',
+  },
+  unreadBadge: { enabled: true, badgeColor: '#2563eb' },
 };
 
 let groups: Group[] = [
@@ -455,6 +465,10 @@ export const mockAdapter = async (
   }
 
   if (method === 'get' && path === '/company') {
+    return respond(config, { company });
+  }
+  if (method === 'put' && path === '/company/ghl-token') {
+    company = { ...company, hasGhlApiToken: Boolean((body as { token?: string }).token) };
     return respond(config, { company });
   }
   if (method === 'put' && path === '/company/update') {
@@ -638,6 +652,7 @@ export const mockAdapter = async (
       _id: nextId('cf'),
       name: input.name,
       exposedFieldKeys: input.exposedFieldKeys,
+      mode: input.mode,
     };
     customFieldCampaigns.push(campaign);
     return respond(config, { campaign }, 201);
@@ -767,6 +782,9 @@ export const mockAdapter = async (
         loader: { enabled: loader.enabled },
         'conversation-style': { enabled: conversationStyle.enabled },
         misc: { enabled: miscSettings.tooltip.enabled || miscSettings.addonBanner.enabled },
+        membership: { enabled: miscSettings.membership.enabled && Boolean(miscSettings.membership.url) },
+        'unread-badge': { enabled: miscSettings.unreadBadge.enabled && company.hasGhlApiToken },
+        'custom-fields': { enabled: customFieldCampaigns.length > 0 },
       },
     });
   }

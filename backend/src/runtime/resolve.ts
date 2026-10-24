@@ -2,7 +2,9 @@ import { FilterQuery, Model, Types } from 'mongoose';
 import { Banner } from '../models/Banner';
 import { BookACall } from '../models/BookACall';
 import { ChatBubbleConfig } from '../models/ChatBubbleConfig';
+import { Company } from '../models/Company';
 import { ConversationStyle } from '../models/ConversationStyle';
+import { CustomFieldCampaign } from '../models/CustomFieldCampaign';
 import { DynamicLink } from '../models/DynamicLink';
 import { FloatingButton } from '../models/FloatingButton';
 import { InjectedButton } from '../models/InjectedButton';
@@ -26,7 +28,16 @@ export interface RuntimeFeatureConfig {
   [key: string]: unknown;
 }
 
-type Resolver = (companyId: Types.ObjectId, groupId: string) => Promise<RuntimeFeatureConfig>;
+/** What the viewer's request tells us about where they are (set by the embed script). */
+export interface RuntimeContext {
+  locationId?: string;
+}
+
+type Resolver = (
+  companyId: Types.ObjectId,
+  groupId: string,
+  ctx: RuntimeContext,
+) => Promise<RuntimeFeatureConfig>;
 
 const DISABLED: RuntimeFeatureConfig = { enabled: false };
 
@@ -254,6 +265,61 @@ const resolveMisc: Resolver = async (companyId, groupId) => {
   };
 };
 
+const resolveMembership: Resolver = async (companyId, groupId, ctx) => {
+  const misc = await findScoped(MiscSettings, companyId, groupId);
+  const m = misc?.membership;
+  if (!m?.enabled || !m.url) return DISABLED;
+  // The button is for sub-accounts, so it never shows outside a location; an empty
+  // allow-list means every location in scope.
+  if (!ctx.locationId) return DISABLED;
+  if (m.allowedLocationIds.length > 0 && !m.allowedLocationIds.includes(ctx.locationId)) return DISABLED;
+  return {
+    enabled: true,
+    buttonLabel: m.buttonLabel,
+    url: m.url,
+    openMode: m.openMode,
+    icon: m.icon ?? '',
+    backgroundColor: m.backgroundColor,
+    textColor: m.textColor,
+  };
+};
+
+const resolveUnreadBadge: Resolver = async (companyId, groupId) => {
+  const misc = await findScoped(MiscSettings, companyId, groupId);
+  if (!misc?.unreadBadge.enabled) return DISABLED;
+  // Counting unread conversations needs the company's GHL API token; without one the
+  // badge can never be populated, so don't make the browser poll for it.
+  const company = await Company.findById(companyId).select('hasGhlApiToken').lean();
+  if (!company?.hasGhlApiToken) return DISABLED;
+  return { enabled: true, badgeColor: misc.unreadBadge.badgeColor, pollSeconds: 60 };
+};
+
+/** Field keys are matched loosely: case-insensitive, spaces as underscores, no "contact."/"opportunity." prefix. */
+export function normalizeFieldKey(key: string): string {
+  return key
+    .trim()
+    .toLowerCase()
+    .replace(/^(contact|opportunity)\./, '')
+    .replace(/\s+/g, '_');
+}
+
+const resolveCustomFields: Resolver = async (companyId, groupId) => {
+  const campaigns = await findScopedList(CustomFieldCampaign, companyId, groupId, {}, { createdAt: 1 });
+  const lock = new Set<string>();
+  const hide = new Set<string>();
+  for (const c of campaigns) {
+    const target = c.mode === 'hide' ? hide : lock;
+    for (const key of c.exposedFieldKeys) {
+      const k = normalizeFieldKey(key);
+      if (k) target.add(k);
+    }
+  }
+  // A field that is both locked and hidden is simply hidden.
+  hide.forEach((k) => lock.delete(k));
+  if (lock.size + hide.size === 0) return DISABLED;
+  return { enabled: true, lock: [...lock], hide: [...hide] };
+};
+
 /**
  * Feature key → resolver. The keys are also the CDN script names
  * (runtime-scripts/<key>.js) and the keys of the bundled runtime config.
@@ -272,6 +338,9 @@ export const RUNTIME_FEATURES = {
   loader: resolveLoader,
   'conversation-style': resolveConversationStyle,
   misc: resolveMisc,
+  membership: resolveMembership,
+  'unread-badge': resolveUnreadBadge,
+  'custom-fields': resolveCustomFields,
 } satisfies Record<string, Resolver>;
 
 export type RuntimeFeatureKey = keyof typeof RUNTIME_FEATURES;
@@ -283,9 +352,10 @@ export function isRuntimeFeature(key: string): key is RuntimeFeatureKey {
 export async function resolveAllFeatures(
   companyId: Types.ObjectId,
   groupId: string,
+  ctx: RuntimeContext = {},
 ): Promise<Record<RuntimeFeatureKey, RuntimeFeatureConfig>> {
   const keys = Object.keys(RUNTIME_FEATURES) as RuntimeFeatureKey[];
-  const results = await Promise.all(keys.map((k) => RUNTIME_FEATURES[k](companyId, groupId)));
+  const results = await Promise.all(keys.map((k) => RUNTIME_FEATURES[k](companyId, groupId, ctx)));
   return Object.fromEntries(keys.map((k, i) => [k, results[i]])) as Record<
     RuntimeFeatureKey,
     RuntimeFeatureConfig
