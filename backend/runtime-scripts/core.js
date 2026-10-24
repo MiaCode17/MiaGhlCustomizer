@@ -281,9 +281,169 @@
     return !!C.qs(C.sel.loginRoot);
   };
 
-  /** The viewer's GHL role, if an SSO handshake exposed it. Null means unknown. */
+  /* ------------------------------------------------------------- identity */
+
+  /*
+   * Who is looking at the portal, and which SaaS plan their location is on.
+   * GHL exposes the signed-in user and company through its own AppUtils global,
+   * and its internal API (authorised by the m_a session cookie) returns the
+   * location's SaaS subscription. Everything degrades to "unknown" when those
+   * are unavailable (login page, custom domain without AppUtils, API change).
+   */
+  var identity = { user: null, ghlCompanyId: '', planByLocation: {}, loaded: null };
+  var GHL_API = 'https://backend.leadconnectorhq.com';
+
+  C.getCookie = function (name) {
+    var parts = document.cookie ? document.cookie.split(';') : [];
+    for (var i = 0; i < parts.length; i++) {
+      var idx = parts[i].indexOf('=');
+      if (idx < 0) continue;
+      if (parts[i].slice(0, idx).trim() === name) {
+        try {
+          return decodeURIComponent(parts[i].slice(idx + 1).trim());
+        } catch (e) {
+          return parts[i].slice(idx + 1).trim();
+        }
+      }
+    }
+    return null;
+  };
+
+  /** GET against GHL's internal API as the signed-in user. Resolves null on any failure. */
+  C.ghlFetch = function (path) {
+    var token = C.getCookie('m_a');
+    if (!token) return Promise.resolve(null);
+    return fetch(GHL_API + path, {
+      method: 'GET',
+      headers: { authorization: 'Bearer ' + token, channel: 'APP', source: 'WEB_USER', version: '2021-07-28' },
+    })
+      .then(function (res) {
+        return res.ok ? res.json() : null;
+      })
+      .catch(function () {
+        return null;
+      });
+  };
+
+  function appUtils() {
+    var a = window.AppUtils;
+    return a && a.Utilities ? a.Utilities : null;
+  }
+
+  function waitFor(test, ms) {
+    return new Promise(function (resolve) {
+      var started = Date.now();
+      (function tick() {
+        var value = test();
+        if (value || Date.now() - started > ms) return resolve(value || null);
+        setTimeout(tick, 150);
+      })();
+    });
+  }
+
+  // role: admin | user; type: agency | account. roleKey matches the permission keys
+  // used by role-gated features: agency_admins, agency_users, account_admins, account_users.
+  function normalizeUser(raw) {
+    if (!raw) return null;
+    var isAdmin = String(raw.role || '').toLowerCase() === 'admin';
+    var isAgency = String(raw.type || '').toLowerCase() === 'agency';
+    return {
+      id: raw.id || '',
+      email: raw.email || '',
+      name: raw.name || [raw.firstName, raw.lastName].filter(Boolean).join(' '),
+      role: isAdmin ? 'admin' : 'user',
+      type: isAgency ? 'agency' : 'account',
+      roleKey: (isAgency ? 'agency' : 'account') + '_' + (isAdmin ? 'admins' : 'users'),
+    };
+  }
+
+  function loadIdentity() {
+    if (identity.loaded) return identity.loaded;
+    // The login page has no signed-in user: don't hold the config request for it.
+    var wait = C.isLoginPage() ? 0 : 3000;
+    identity.loaded = waitFor(appUtils, wait)
+      .then(function (util) {
+        if (!util) return;
+        return Promise.all([
+          Promise.resolve(util.getCurrentUser && util.getCurrentUser()).catch(function () {
+            return null;
+          }),
+          Promise.resolve(util.getCompany && util.getCompany()).catch(function () {
+            return null;
+          }),
+        ]).then(function (res) {
+          identity.user = normalizeUser(res[0]);
+          identity.ghlCompanyId = (res[1] && res[1].id) || '';
+        });
+      })
+      .catch(function () {});
+    return identity.loaded;
+  }
+
+  function loadPlan(locationId) {
+    if (!locationId) return Promise.resolve('');
+    if (Object.prototype.hasOwnProperty.call(identity.planByLocation, locationId)) {
+      return Promise.resolve(identity.planByLocation[locationId]);
+    }
+    var query = identity.ghlCompanyId ? '?companyId=' + encodeURIComponent(identity.ghlCompanyId) : '';
+    return C.ghlFetch('/saas/get-saas-subscription/' + encodeURIComponent(locationId) + query).then(function (res) {
+      var planId = (res && res.data && res.data.saasPlanId) || '';
+      identity.planByLocation[locationId] = planId;
+      return planId;
+    });
+  }
+
+  /** Resolves { user, ghlCompanyId, planId } for a location (bounded wait; never rejects). */
+  C.identify = function (locationId) {
+    return loadIdentity()
+      .then(function () {
+        return loadPlan(locationId);
+      })
+      .then(function (planId) {
+        C.planId = planId || '';
+        return { user: identity.user, ghlCompanyId: identity.ghlCompanyId, planId: C.planId };
+      });
+  };
+
+  C.user = function () {
+    return identity.user;
+  };
+
+  C.planId = '';
+
+  /** The viewer's GHL company ID as GHL reports it (may differ from the install snippet's ID). */
+  C.ghlCompanyId = function () {
+    return identity.ghlCompanyId;
+  };
+
+  /**
+   * Legacy single-value role used by the link role targets: owner = agency admin,
+   * admin = any other admin, user = everyone else. Null means unknown.
+   */
   C.userRole = function () {
-    return window.__customizerUserRole || null;
+    if (window.__customizerUserRole) return window.__customizerUserRole;
+    var u = identity.user;
+    if (!u) return null;
+    if (u.role === 'admin') return u.type === 'agency' ? 'owner' : 'admin';
+    return 'user';
+  };
+
+  /** The viewer's permission key (agency_admins, agency_users, account_admins, account_users) or null. */
+  C.roleKey = function () {
+    return identity.user ? identity.user.roleKey : null;
+  };
+
+  /**
+   * Whether the viewer may see something gated by `perms`, an object keyed by role key
+   * (missing keys count as allowed). With an unknown role, only unrestricted items show.
+   */
+  C.allowedFor = function (perms) {
+    if (!perms || typeof perms !== 'object') return true;
+    var key = C.roleKey();
+    if (key) return perms[key] !== false;
+    return Object.keys(perms).every(function (k) {
+      return perms[k] !== false;
+    });
   };
 
   /* --------------------------------------------------------------- events */
@@ -359,6 +519,10 @@
     '.mgc-btn:hover{filter:brightness(1.07)}',
     '.mgc-btn:active{transform:translateY(1px)}',
     '.mgc-overlay{position:fixed;inset:0;z-index:2147483000;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;animation:mgc-fade-in .18s ease}',
+    '@keyframes mgc-slide-right{from{transform:translateX(100%)}to{transform:none}}',
+    '@keyframes mgc-slide-left{from{transform:translateX(-100%)}to{transform:none}}',
+    '@keyframes mgc-slide-top{from{transform:translateY(-100%)}to{transform:none}}',
+    '@keyframes mgc-slide-bottom{from{transform:translateY(100%)}to{transform:none}}',
   ].join('\n');
 
   var BUTTON_SIZES = {
@@ -533,19 +697,284 @@
   };
 
   /**
-   * Opens a URL the way a customizer link asked for. Relative links stay in the
-   * GHL tab; absolute links default to a new tab.
+   * Side panel iframe that slides in from an edge. opts: { direction: right|left|top|bottom
+   * (default right), percent: 20–100 of the viewport along that axis (default 50) }.
    */
-  C.open = function (url, mode, title) {
+  C.drawer = function (url, title, opts) {
     var safe = C.safeUrl(url);
     if (!safe) return;
-    if (!mode) mode = /^[/#?.]/.test(safe) ? 'same-tab' : 'new-tab';
-    if (mode === 'modal') return C.modal(safe, title);
-    if (mode === 'same-tab') {
-      window.location.href = safe;
-      return;
+    opts = opts || {};
+    var dir = ['left', 'top', 'bottom'].indexOf(opts.direction) >= 0 ? opts.direction : 'right';
+    var percent = Math.min(100, Math.max(20, parseInt(opts.percent, 10) || 50));
+    var horizontal = dir === 'left' || dir === 'right';
+    C.removeMarked('drawer');
+
+    function close() {
+      document.removeEventListener('keydown', onKey);
+      C.removeMarked('drawer');
     }
-    window.open(safe, '_blank', 'noopener');
+    function onKey(e) {
+      if (e.key === 'Escape') close();
+    }
+    document.addEventListener('keydown', onKey);
+
+    var panelStyle = {
+      position: 'absolute',
+      background: '#fff',
+      display: 'flex',
+      'flex-direction': 'column',
+      'box-shadow': '0 0 40px rgba(0,0,0,.3)',
+      animation: 'mgc-slide-' + dir + ' .22s ease',
+    };
+    panelStyle[dir] = '0';
+    if (horizontal) {
+      panelStyle.top = '0';
+      panelStyle.bottom = '0';
+      panelStyle.width = 'min(100vw, ' + percent + 'vw)';
+    } else {
+      panelStyle.left = '0';
+      panelStyle.right = '0';
+      panelStyle.height = percent + 'vh';
+    }
+
+    var panel = C.h(
+      'div',
+      {
+        style: panelStyle,
+        attrs: { role: 'dialog', 'aria-label': title || 'Drawer' },
+        on: {
+          click: function (e) {
+            e.stopPropagation();
+          },
+        },
+      },
+      [
+        C.h(
+          'div',
+          {
+            style: {
+              display: 'flex',
+              'align-items': 'center',
+              'justify-content': 'space-between',
+              padding: '10px 14px',
+              'border-bottom': '1px solid #e5e7eb',
+              font: '600 14px/1.4 system-ui, sans-serif',
+              color: '#111827',
+            },
+          },
+          [
+            C.h('span', { text: title || '' }),
+            C.h('button', {
+              text: '✕',
+              attrs: { type: 'button', 'aria-label': 'Close' },
+              style: { border: '0', background: 'transparent', cursor: 'pointer', 'font-size': '16px', color: '#6b7280' },
+              on: { click: close },
+            }),
+          ],
+        ),
+        C.h('iframe', {
+          attrs: { src: safe, title: title || 'Customizer', allow: 'clipboard-write; fullscreen' },
+          style: { border: '0', width: '100%', flex: '1', background: '#fff' },
+        }),
+      ],
+    );
+    document.body.appendChild(
+      C.mark(
+        C.h(
+          'div',
+          {
+            style: { position: 'fixed', inset: '0', 'z-index': '2147483000', background: 'rgba(15,23,42,.35)' },
+            on: { click: close },
+          },
+          [panel],
+        ),
+        'drawer',
+      ),
+    );
+  };
+
+  /* --------------------------------------------------------- URL variables */
+
+  /**
+   * Placeholders a link or button URL may contain:
+   *   {{location.id}} {{user.id}} {{user.email}} {{company.id}} {{contact.id}}      (immediate)
+   *   {{contact.firstName}} {{contact.email}} {{contact.custom.<fieldKey>}}          (contact page)
+   *   {{custom_values.<key>}}                                                        (location custom values)
+   * plus the shorthands {loc_id} and {user_id}. Values are URL-encoded; unknown
+   * placeholders become empty. Contact and custom-value data come from GHL's API.
+   */
+  var TOKEN = /\{\{\s*([^{}]+?)\s*\}\}|\{(loc_id|user_id)\}/g;
+
+  C.contactIdFromUrl = function () {
+    var m = location.pathname.match(/\/contacts\/detail\/([^/?#]+)/);
+    return m ? m[1] : '';
+  };
+
+  function normToken(t) {
+    return String(t || '')
+      .replace(/\s+/g, '')
+      .toLowerCase();
+  }
+
+  function normKey(k) {
+    return normToken(String(k || '').replace(/\{\{|\}\}/g, ''))
+      .replace(/^custom_values\./, '')
+      .replace(/^contact\./, '');
+  }
+
+  var CONTACT_FIELDS = ['firstname', 'lastname', 'email', 'phone', 'dateofbirth', 'name', 'companyname'];
+
+  /**
+   * Resolves placeholders in `url`. opts: { sendContact, sendCustomFields } additionally
+   * append the contact's details / custom fields as query parameters (contact page only).
+   * Resolves to the final URL string.
+   */
+  C.resolveUrl = function (url, opts) {
+    opts = opts || {};
+    var raw = String(url || '');
+    var tokens = [];
+    raw.replace(TOKEN, function (m, a, b) {
+      tokens.push(normToken(a || b));
+      return m;
+    });
+
+    var wantsContact =
+      !!(opts.sendContact || opts.sendCustomFields) ||
+      tokens.some(function (t) {
+        return t.indexOf('contact.') === 0 && t !== 'contact.id';
+      });
+    var wantsValues = tokens.some(function (t) {
+      return t.indexOf('custom_values.') === 0;
+    });
+    if (!tokens.length && !wantsContact) return Promise.resolve(raw);
+
+    var locationId = C.locationId || C.locationIdFromUrl();
+    var contactId = C.contactIdFromUrl();
+
+    return loadIdentity().then(function () {
+      var needCustomFields = !!opts.sendCustomFields || tokens.some(function (t) {
+        return t.indexOf('contact.custom.') === 0;
+      });
+      return Promise.all([
+        wantsContact && contactId ? C.ghlFetch('/contacts/' + encodeURIComponent(contactId)) : null,
+        wantsContact && contactId && locationId && needCustomFields
+          ? C.ghlFetch('/locations/' + encodeURIComponent(locationId) + '/customFields')
+          : null,
+        wantsValues && locationId ? C.ghlFetch('/locations/' + encodeURIComponent(locationId) + '/customValues') : null,
+      ]).then(function (res) {
+        var contact = (res[0] && res[0].contact) || {};
+        var fieldDefs = (res[1] && res[1].customFields) || [];
+        var valueList = res[2] && (res[2].customValues || (Array.isArray(res[2]) ? res[2] : []));
+
+        // contact.customFields is [{id, value}]; map ids to their fieldKey ("contact.x" → "x").
+        var custom = {};
+        (contact.customFields || []).forEach(function (f) {
+          var def = fieldDefs.filter(function (d) {
+            return d.id === f.id;
+          })[0];
+          var key = def && def.fieldKey ? normKey(def.fieldKey) : normToken(f.id);
+          custom[key] = f.value;
+        });
+        var values = {};
+        (valueList || []).forEach(function (v) {
+          if (v && v.fieldKey) values[normKey(v.fieldKey)] = v.value;
+        });
+
+        function lookup(token) {
+          if (token === 'location.id' || token === 'loc_id') return locationId;
+          if (token === 'user.id' || token === 'user_id') return identity.user ? identity.user.id : '';
+          if (token === 'user.email') return identity.user ? identity.user.email : '';
+          if (token === 'company.id') return identity.ghlCompanyId;
+          if (token === 'contact.id') return contactId;
+          if (token.indexOf('contact.custom.') === 0) return custom[normKey(token.slice(15))];
+          if (token.indexOf('custom_values.') === 0) return values[normKey(token)];
+          if (token.indexOf('contact.') === 0) {
+            var field = token.slice(8);
+            if (CONTACT_FIELDS.indexOf(field) >= 0) {
+              var prop = Object.keys(contact).filter(function (k) {
+                return k.toLowerCase() === field;
+              })[0];
+              return prop ? contact[prop] : '';
+            }
+            return custom[normKey(field)];
+          }
+          return '';
+        }
+
+        var out = raw.replace(TOKEN, function (m, a, b) {
+          var v = lookup(normToken(a || b));
+          return v == null ? '' : encodeURIComponent(String(v));
+        });
+
+        if (contactId && (opts.sendContact || opts.sendCustomFields)) {
+          var params = [];
+          if (opts.sendContact) {
+            var email = contact.email && String(contact.email).trim();
+            params.push(['firstName', contact.firstName || ''], ['lastName', contact.lastName || '']);
+            params.push(['email', email || ''], ['phone', contact.phone || ''], ['contactId', contactId]);
+            if (contact.dateOfBirth) params.push(['dateOfBirth', contact.dateOfBirth]);
+          }
+          if (opts.sendCustomFields) {
+            Object.keys(custom).forEach(function (k) {
+              params.push([k, custom[k] == null ? '' : custom[k]]);
+            });
+          }
+          var query = params
+            .map(function (p) {
+              return encodeURIComponent(p[0]) + '=' + encodeURIComponent(String(p[1]));
+            })
+            .join('&');
+          if (query) {
+            var hash = '';
+            var hashAt = out.indexOf('#');
+            if (hashAt >= 0) {
+              hash = out.slice(hashAt);
+              out = out.slice(0, hashAt);
+            }
+            out += (out.indexOf('?') >= 0 ? '&' : '?') + query + hash;
+          }
+        }
+        return out;
+      });
+    });
+  };
+
+  /**
+   * Opens a URL the way a customizer link asked for. mode: modal | drawer | new-tab |
+   * same-tab (new_tab is accepted too). Relative links default to the GHL tab,
+   * absolute links to a new tab. opts: { title, direction, percent, sendContact,
+   * sendCustomFields } — placeholders in the URL are resolved first (see C.resolveUrl).
+   */
+  C.open = function (url, mode, title, opts) {
+    opts = opts || {};
+    var rawUrl = String(url || '');
+    if (!C.safeUrl(rawUrl.replace(TOKEN, 'x'))) return;
+    mode = mode ? String(mode).replace(/_/g, '-') : '';
+    if (!mode) mode = /^[/#?.]/.test(rawUrl.trim()) ? 'same-tab' : 'new-tab';
+
+    // Open the new tab synchronously so popup blockers allow it, then point it at the resolved URL.
+    var needsLookup = rawUrl.search(TOKEN) >= 0 || !!(opts.sendContact || opts.sendCustomFields);
+    var tab = mode === 'new-tab' && needsLookup ? window.open('about:blank', '_blank') : null;
+
+    return C.resolveUrl(rawUrl, opts).then(function (resolved) {
+      var safe = C.safeUrl(resolved);
+      if (!safe) {
+        if (tab) tab.close();
+        return;
+      }
+      if (mode === 'modal') return C.modal(safe, title);
+      if (mode === 'drawer') return C.drawer(safe, title, opts);
+      if (mode === 'same-tab') {
+        window.location.href = safe;
+        return;
+      }
+      if (tab) {
+        tab.opener = null;
+        tab.location.href = safe;
+      } else {
+        window.open(safe, '_blank', 'noopener');
+      }
+    });
   };
 
   /* ----------------------------------------------------- feature registry */
@@ -593,6 +1022,7 @@
   function teardownAll() {
     Object.keys(C.active).forEach(teardownFeature);
     C.removeMarked('modal');
+    C.removeMarked('drawer');
   }
 
   /* ------------------------------------------------------------ bootstrap */
@@ -601,18 +1031,28 @@
 
   function load() {
     var seq = ++requestSeq;
-    var url =
-      C.apiBase +
-      '/api/v1/runtime/config?company_id=' +
-      encodeURIComponent(C.companyId) +
-      (C.locationId ? '&locationId=' + encodeURIComponent(C.locationId) : '');
+    var locationId = C.locationId;
 
-    fetch(url, { credentials: 'omit' })
+    // Resolve who the viewer is and which SaaS plan the location is on first, so the
+    // server can pick the right group (plan groups never match without a planId).
+    C.identify(locationId)
+      .then(function (who) {
+        if (seq !== requestSeq) return null;
+        var url =
+          C.apiBase +
+          '/api/v1/runtime/config?company_id=' +
+          encodeURIComponent(C.companyId) +
+          (locationId ? '&locationId=' + encodeURIComponent(locationId) : '') +
+          (who.planId ? '&planId=' + encodeURIComponent(who.planId) : '');
+        return fetch(url, { credentials: 'omit' });
+      })
       .then(function (res) {
+        if (!res) return null;
         if (!res.ok) throw new Error('HTTP ' + res.status);
         return res.json();
       })
       .then(function (data) {
+        if (!data) return;
         if (seq !== requestSeq) return; // a newer location's request superseded this one
         teardownAll();
         C.config = data.features || {};

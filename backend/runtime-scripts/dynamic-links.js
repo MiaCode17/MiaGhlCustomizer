@@ -1,8 +1,8 @@
 /*
  * Dynamic links: custom menu links appended to GHL's left sidebar. Links
  * targeted at a specific role are shown only when the viewer's role is known
- * (window.__customizerUserRole, set by an SSO handshake) and matches; with an
- * unknown role only "all" links are shown.
+ * (C.userRole(): owner = agency admin, admin = any admin, resolved from GHL's
+ * AppUtils) and matches; with an unknown role only "all" links are shown.
  * Config: { items: [{ id, title, url, icon, openMode, roleTarget }] }.
  */
 (function (C) {
