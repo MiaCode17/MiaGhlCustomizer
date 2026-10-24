@@ -47,6 +47,10 @@ export const GHL_SELECTORS = {
   topMenuNav: '.flex.flex-row.justify-start.items-center.topmenu-nav, .topmenu-nav',
   headerAnchor: '#CalendarsFeatureDiscovery',
   opportunityModal: '#opportunitiesModel',
+  // The tab list inside the opportunity dialog, and the content area next to it (verified).
+  opportunityTabStrip: '.wrapperHeader',
+  opportunityTabContent:
+    'body > div.n-modal-container > div > div > div.n-scrollbar-container > div > div.n-card.n-modal.hl-modal > div.n-card__content > div.wrapper > div > div.innerWrapper.mt-2\\.5.flex.border-t.border-gray-200.pt-3\\.5 > div.w-full',
   launchpadAnchor: '#invite-user',
   sidebarOpportunities: '#sb_opportunities',
   sidebarBilling: '#sb_saas-billing',

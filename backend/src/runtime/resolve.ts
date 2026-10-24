@@ -99,7 +99,13 @@ const resolveLogo: Resolver = async (companyId, groupId) => {
 };
 
 const resolveButtons: Resolver = async (companyId, groupId) => {
-  const buttons = await findScopedList(InjectedButton, companyId, groupId, {}, { order: 1, createdAt: 1 });
+  const buttons = await findScopedList(
+    InjectedButton,
+    companyId,
+    groupId,
+    { surface: { $ne: 'opportunity-tab' } },
+    { order: 1, createdAt: 1 },
+  );
   if (buttons.length === 0) return DISABLED;
   const bySurface: Record<string, unknown[]> = {};
   for (const b of buttons) {
@@ -144,6 +150,30 @@ const resolveButtons: Resolver = async (companyId, groupId) => {
     });
   }
   return { enabled: true, surfaces: bySurface };
+};
+
+const resolveOpportunityTabs: Resolver = async (companyId, groupId) => {
+  const tabs = await findScopedList(
+    InjectedButton,
+    companyId,
+    groupId,
+    { surface: 'opportunity-tab' },
+    { order: 1, createdAt: 1 },
+  );
+  if (tabs.length === 0) return DISABLED;
+  return {
+    enabled: true,
+    items: tabs.map((t) => ({
+      id: String(t._id),
+      label: t.label,
+      icon: t.icon ?? '',
+      url: t.targetUrl ?? '',
+      accentColor: t.backgroundColor ?? '',
+      sendContact: t.sendContact,
+      sendCustomFields: t.sendCustomFields,
+      permissions: t.permissions,
+    })),
+  };
 };
 
 const resolveFloatingButtons: Resolver = async (companyId, groupId) => {
@@ -380,6 +410,7 @@ export const RUNTIME_FEATURES = {
   'special-theme': resolveSpecialTheme,
   logo: resolveLogo,
   buttons: resolveButtons,
+  'opportunity-tabs': resolveOpportunityTabs,
   'floating-buttons': resolveFloatingButtons,
   'book-a-call': resolveBookACall,
   'dynamic-links': resolveDynamicLinks,

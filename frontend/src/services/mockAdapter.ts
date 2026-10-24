@@ -808,6 +808,7 @@ export const mockAdapter = async (
         membership: { enabled: miscSettings.membership.enabled && Boolean(miscSettings.membership.url) },
         'unread-badge': { enabled: miscSettings.unreadBadge.enabled && company.hasGhlApiToken },
         'custom-fields': { enabled: customFieldCampaigns.length > 0 },
+        'opportunity-tabs': { enabled: buttons.some((b) => b.surface === 'opportunity-tab') },
       },
     });
   }

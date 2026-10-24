@@ -14,6 +14,7 @@ const BUTTON_SURFACES: ButtonSurface[] = [
   'opportunity',
   'record-detail',
   'record-tab',
+  'opportunity-tab',
 ];
 
 const openModeSchema = z.enum(['modal', 'drawer', 'new-tab', 'same-tab']);
@@ -36,7 +37,7 @@ const menuItemSchema = z.object({
 });
 
 const buttonInputSchema = z.object({
-  surface: z.enum(['header', 'dashboard', 'contact', 'opportunity', 'record-detail', 'record-tab']),
+  surface: z.enum(['header', 'dashboard', 'contact', 'opportunity', 'record-detail', 'record-tab', 'opportunity-tab']),
   label: z.string().min(1),
   tooltip: z.string().optional(),
   icon: z.string().optional(),

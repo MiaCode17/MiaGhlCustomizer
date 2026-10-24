@@ -292,6 +292,7 @@
    */
   var identity = { user: null, ghlCompanyId: '', planByLocation: {}, loaded: null };
   var GHL_API = 'https://backend.leadconnectorhq.com';
+  var GHL_SERVICES_API = 'https://services.leadconnectorhq.com';
 
   C.getCookie = function (name) {
     var parts = document.cookie ? document.cookie.split(';') : [];
@@ -309,11 +310,14 @@
     return null;
   };
 
-  /** GET against GHL's internal API as the signed-in user. Resolves null on any failure. */
-  C.ghlFetch = function (path) {
+  /**
+   * GET against GHL's internal API as the signed-in user (opts.services targets the public
+   * services host instead). Resolves null on any failure.
+   */
+  C.ghlFetch = function (path, opts) {
     var token = C.getCookie('m_a');
     if (!token) return Promise.resolve(null);
-    return fetch(GHL_API + path, {
+    return fetch((opts && opts.services ? GHL_SERVICES_API : GHL_API) + path, {
       method: 'GET',
       headers: { authorization: 'Bearer ' + token, channel: 'APP', source: 'WEB_USER', version: '2021-07-28' },
     })
@@ -918,6 +922,26 @@
       .replace(/^contact\./, '');
   }
 
+  /** Appends [name, value] pairs to a URL's query string (before any #hash), URL-encoded. */
+  C.appendQuery = function (url, pairs) {
+    var query = pairs
+      .filter(function (p) {
+        return p[0] !== '' && p[0] != null;
+      })
+      .map(function (p) {
+        return encodeURIComponent(p[0]) + '=' + encodeURIComponent(p[1] == null ? '' : String(p[1]));
+      })
+      .join('&');
+    if (!query) return url;
+    var hash = '';
+    var hashAt = url.indexOf('#');
+    if (hashAt >= 0) {
+      hash = url.slice(hashAt);
+      url = url.slice(0, hashAt);
+    }
+    return url + (url.indexOf('?') >= 0 ? '&' : '?') + query + hash;
+  };
+
   var CONTACT_FIELDS = ['firstname', 'lastname', 'email', 'phone', 'dateofbirth', 'name', 'companyname'];
 
   /**
@@ -1015,20 +1039,7 @@
               params.push([k, custom[k] == null ? '' : custom[k]]);
             });
           }
-          var query = params
-            .map(function (p) {
-              return encodeURIComponent(p[0]) + '=' + encodeURIComponent(String(p[1]));
-            })
-            .join('&');
-          if (query) {
-            var hash = '';
-            var hashAt = out.indexOf('#');
-            if (hashAt >= 0) {
-              hash = out.slice(hashAt);
-              out = out.slice(0, hashAt);
-            }
-            out += (out.indexOf('?') >= 0 ? '&' : '?') + query + hash;
-          }
+          out = C.appendQuery(out, params);
         }
         return out;
       });

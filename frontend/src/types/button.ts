@@ -1,4 +1,11 @@
-export type ButtonSurface = 'header' | 'dashboard' | 'contact' | 'opportunity' | 'record-detail' | 'record-tab';
+export type ButtonSurface =
+  | 'header'
+  | 'dashboard'
+  | 'contact'
+  | 'opportunity'
+  | 'record-detail'
+  | 'record-tab'
+  | 'opportunity-tab';
 export type ButtonStyleVariant = 'primary' | 'default' | 'dashed' | 'text';
 export type ButtonSizeVariant = 'small' | 'middle' | 'large';
 export type ButtonIconPosition = 'left' | 'right';

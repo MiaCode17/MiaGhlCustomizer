@@ -6,7 +6,9 @@ export type ButtonSurface =
   | 'contact'
   | 'opportunity'
   | 'record-detail'
-  | 'record-tab';
+  | 'record-tab'
+  /** A tab inside the opportunity dialog (not a button), see the opportunity-tabs runtime feature. */
+  | 'opportunity-tab';
 export type ButtonStyle = 'primary' | 'default' | 'dashed' | 'text';
 export type ButtonSize = 'small' | 'middle' | 'large';
 export type ButtonIconPosition = 'left' | 'right';
@@ -107,7 +109,7 @@ const injectedButtonSchema = new Schema<InjectedButtonDoc>(
     groupId: { type: String, default: '', index: true },
     surface: {
       type: String,
-      enum: ['header', 'dashboard', 'contact', 'opportunity', 'record-detail', 'record-tab'],
+      enum: ['header', 'dashboard', 'contact', 'opportunity', 'record-detail', 'record-tab', 'opportunity-tab'],
       required: true,
     },
     label: { type: String, required: true, trim: true },

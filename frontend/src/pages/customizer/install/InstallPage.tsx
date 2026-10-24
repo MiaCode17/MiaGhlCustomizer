@@ -23,6 +23,7 @@ const FEATURE_LABELS: Record<string, string> = {
   membership: 'Membership button',
   'unread-badge': 'Unread conversations badge',
   'custom-fields': 'Custom field locks',
+  'opportunity-tabs': 'Opportunity tabs',
 };
 
 async function copy(text: string) {
