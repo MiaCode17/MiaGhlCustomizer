@@ -4,16 +4,7 @@ import { GiftOutlined } from '@ant-design/icons';
 import { PageIntro } from '../../../components/PageIntro';
 import { specialThemeService } from '../../../services/specialThemeService';
 import { emptySpecialTheme, SpecialTheme } from '../../../types/specialTheme';
-
-const SEASONAL_THEMES = [
-  { key: 'christmas', label: 'Christmas', emoji: '🎄', gradient: ['#1b4332', '#d90429'] },
-  { key: 'halloween', label: 'Halloween', emoji: '🎃', gradient: ['#ff7b00', '#240046'] },
-  { key: 'thanksgiving', label: 'Thanksgiving', emoji: '🦃', gradient: ['#7f4f24', '#d4a373'] },
-  { key: 'new-year', label: 'New Year', emoji: '🎉', gradient: ['#ffd60a', '#000814'] },
-  { key: 'valentines', label: "Valentine's", emoji: '💕', gradient: ['#ff8fa3', '#c9184a'] },
-  { key: 'summer', label: 'Summer', emoji: '☀️', gradient: ['#00b4d8', '#ffb703'] },
-  { key: 'black-friday', label: 'Black Friday', emoji: '🛍️', gradient: ['#000000', '#7a1f2b'] },
-] as const;
+import { OCCASIONS, OCCASION_CATEGORIES, Occasion } from '../../../utils/occasions';
 
 export function SpecialThemePage() {
   const [groupId, setGroupId] = useState<string | undefined>(undefined);
@@ -39,6 +30,19 @@ export function SpecialThemePage() {
       cancelled = true;
     };
   }, [groupId]);
+
+  /** Picking an occasion also suggests its popup text, unless the agency has already written their own. */
+  const pick = (occasion: Occasion) => {
+    const previous = OCCASIONS.find((o) => o.key === specialTheme.themeKey);
+    const popup = specialTheme.popup;
+    const untouched =
+      (!popup.title && !popup.message) || (previous && popup.title === previous.title && popup.message === previous.message);
+    setSpecialTheme({
+      ...specialTheme,
+      themeKey: occasion.key,
+      popup: untouched ? { ...popup, title: occasion.title, message: occasion.message } : popup,
+    });
+  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -72,30 +76,48 @@ export function SpecialThemePage() {
           <Typography.Text>Enabled</Typography.Text>
         </Space>
 
-        <div className="flex flex-wrap gap-4">
-          {SEASONAL_THEMES.map((theme) => {
-            const selected = specialTheme.themeKey === theme.key;
-            return (
-              <div
-                key={theme.key}
-                onClick={() => setSpecialTheme({ ...specialTheme, themeKey: theme.key })}
-                className="flex flex-col items-center justify-center gap-2 cursor-pointer"
-                style={{
-                  width: 140,
-                  height: 100,
-                  borderRadius: 8,
-                  color: '#fff',
-                  background: `linear-gradient(135deg, ${theme.gradient[0]}, ${theme.gradient[1]})`,
-                  border: selected ? '3px solid #1677ff' : '3px solid transparent',
-                  boxShadow: selected ? '0 0 0 2px rgba(22,119,255,0.3)' : 'none',
-                }}
-              >
-                <span style={{ fontSize: 28 }}>{theme.emoji}</span>
-                <span style={{ fontWeight: 600 }}>{theme.label}</span>
-              </div>
-            );
-          })}
-        </div>
+        {OCCASION_CATEGORIES.map((category) => (
+          <div key={category} style={{ marginBottom: 16 }}>
+            <Typography.Text type="secondary" strong>
+              {category}
+            </Typography.Text>
+            <div className="flex flex-wrap gap-4" style={{ marginTop: 8 }}>
+              {OCCASIONS.filter((o) => o.category === category).map((theme) => {
+                const selected = specialTheme.themeKey === theme.key;
+                return (
+                  <div
+                    key={theme.key}
+                    role="button"
+                    tabIndex={0}
+                    aria-pressed={selected}
+                    title={theme.description}
+                    onClick={() => pick(theme)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        pick(theme);
+                      }
+                    }}
+                    className="flex flex-col items-center justify-center gap-2 cursor-pointer"
+                    style={{
+                      width: 140,
+                      height: 100,
+                      borderRadius: 8,
+                      color: '#fff',
+                      textAlign: 'center',
+                      background: `linear-gradient(135deg, ${theme.accent[0]}, ${theme.accent[1]})`,
+                      border: selected ? '3px solid #1677ff' : '3px solid transparent',
+                      boxShadow: selected ? '0 0 0 2px rgba(22,119,255,0.3)' : 'none',
+                    }}
+                  >
+                    <span style={{ fontSize: 28 }}>{theme.emoji}</span>
+                    <span style={{ fontWeight: 600 }}>{theme.name}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </Card>
 
       <Card title="Popup" loading={loading}>
