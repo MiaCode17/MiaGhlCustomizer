@@ -3,6 +3,12 @@
 White-label customizer for GoHighLevel (GHL) agencies. Admin app configures branding/UI; an embed script
 applies it inside each agency's GHL portal. See README.md for the architecture diagram and env vars.
 
+## GitHub accounts (important)
+- This project belongs to the **MiaCode17** account (`github.com/MiaCode17/MiaGhlCustomizer`). Only commit, push, open PRs or deploy here, as MiaCode17.
+- **Never touch the `MinahilFatima1137` account or any of its repos.** It is the user's office account. Do not push to it, switch `gh` to it, or change git credentials for it.
+- Before any push or PR, confirm `gh auth status` shows MiaCode17 and `git remote -v` points at MiaCode17. If either is different, stop and ask.
+- Do not deploy or merge to `main` unless the user says so.
+
 ## Layout
 - `frontend/` - React 18, Vite, Ant Design, Tailwind. Admin editors with live previews.
 - `backend/src/routes/<feature>/` - `routes.ts` (Zod-validated) + `services.ts` (DB logic). Mounted in `routes/index.ts`.
