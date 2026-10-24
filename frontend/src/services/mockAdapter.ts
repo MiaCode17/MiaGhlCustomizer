@@ -8,7 +8,7 @@ import { LoginPageConfig } from '../types/loginPage';
 import { ButtonSurface, InjectedButton, InjectedButtonInput, buttonBehaviorDefaults } from '../types/button';
 import { FloatingButton, FloatingButtonInput } from '../types/floatingButton';
 import { DynamicLink, DynamicLinkInput } from '../types/dynamicLink';
-import { MenuEdit } from '../types/menuEdit';
+import { allRoles, MenuEdit } from '../types/menuEdit';
 import { CustomFieldCampaign, CustomFieldCampaignInput } from '../types/customField';
 import { Banner, BannerInput } from '../types/banner';
 import { ChatBubbleConfig } from '../types/chatBubble';
@@ -300,12 +300,34 @@ const dynamicLinks: DynamicLink[] = [
 ];
 
 let menuEdit: MenuEdit = {
-  renamed: [{ originalLabel: 'Opportunities', newLabel: 'Deals' }],
+  renamed: [{ originalLabel: 'Opportunities', newLabel: 'Deals', icon: '💼' }],
   hidden: ['App Marketplace'],
-  settingsMenuItems: [{ name: 'Brand Settings', link: '/settings/brand' }],
+  hiddenByRole: [{ label: 'Reputation', roleKeys: ['account_users'] }],
+  moved: [{ label: 'Reporting', position: 'after', target: 'Dashboard' }],
+  settingsMenuItems: [
+    { type: 'divider', name: 'Brand', link: '', openMode: 'auto' },
+    { type: 'link', name: 'Brand Settings', link: '/settings/brand', openMode: 'auto' },
+  ],
   navTree: [
-    { id: 'nav-1', label: 'Resources', order: 0 },
-    { id: 'nav-2', label: 'Help Center', url: 'https://help.miaghl.com', parentId: 'nav-1', order: 0 },
+    { id: 'nav-1', label: 'Resources', order: 0, icon: '📚', openMode: 'auto', permissions: allRoles() },
+    {
+      id: 'nav-2',
+      label: 'Help Center',
+      url: 'https://help.miaghl.com',
+      parentId: 'nav-1',
+      order: 0,
+      openMode: 'modal',
+      permissions: allRoles(),
+    },
+  ],
+  extendedTabs: [
+    {
+      id: 'tab-1',
+      label: 'Playbook',
+      url: 'https://miaghl.com/playbook?loc={{location.id}}',
+      page: 'opportunities',
+      permissions: allRoles(),
+    },
   ],
   toolCategories: [
     {

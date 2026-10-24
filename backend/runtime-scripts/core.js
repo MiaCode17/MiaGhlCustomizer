@@ -896,10 +896,10 @@
    *   {{location.id}} {{user.id}} {{user.email}} {{company.id}} {{contact.id}}      (immediate)
    *   {{contact.firstName}} {{contact.email}} {{contact.custom.<fieldKey>}}          (contact page)
    *   {{custom_values.<key>}}                                                        (location custom values)
-   * plus the shorthands {loc_id} and {user_id}. Values are URL-encoded; unknown
+   * plus the shorthands {loc_id}, {user_id}, {location.id} and {user.id}. Values are URL-encoded; unknown
    * placeholders become empty. Contact and custom-value data come from GHL's API.
    */
-  var TOKEN = /\{\{\s*([^{}]+?)\s*\}\}|\{(loc_id|user_id)\}/g;
+  var TOKEN = /\{\{\s*([^{}]+?)\s*\}\}|\{(loc_id|user_id|location\.id|user\.id)\}/g;
 
   C.contactIdFromUrl = function () {
     var m = location.pathname.match(/\/contacts\/detail\/([^/?#]+)/);

@@ -198,20 +198,50 @@ const resolveMenu: Resolver = async (companyId, groupId) => {
   const menu = await findScoped(MenuEdit, companyId, groupId);
   if (!menu) return DISABLED;
   const hasAny =
-    menu.renamed.length + menu.hidden.length + menu.settingsMenuItems.length + menu.navTree.length > 0 ||
-    menu.toolCategories.some((c) => c.tools.length > 0);
+    menu.renamed.length +
+      menu.hidden.length +
+      menu.hiddenByRole.length +
+      menu.moved.length +
+      menu.settingsMenuItems.length +
+      menu.navTree.length +
+      menu.extendedTabs.length >
+      0 || menu.toolCategories.some((c) => c.tools.length > 0);
   if (!hasAny) return DISABLED;
   return {
     enabled: true,
-    renamed: menu.renamed.map((r) => ({ originalLabel: r.originalLabel, newLabel: r.newLabel })),
+    renamed: menu.renamed.map((r) => ({
+      originalLabel: r.originalLabel,
+      newLabel: r.newLabel,
+      icon: r.icon ?? '',
+    })),
     hidden: [...menu.hidden],
-    settingsMenuItems: menu.settingsMenuItems.map((i) => ({ name: i.name, link: i.link })),
+    hiddenByRole: menu.hiddenByRole.map((h) => ({ label: h.label, roleKeys: [...h.roleKeys] })),
+    moved: menu.moved.map((m) => ({ label: m.label, position: m.position, target: m.target })),
+    settingsMenuItems: menu.settingsMenuItems.map((i) => ({
+      type: i.type,
+      name: i.name,
+      link: i.link,
+      openMode: i.openMode,
+    })),
     navTree: menu.navTree.map((n) => ({
       id: n.id,
       label: n.label,
       url: n.url ?? '',
       parentId: n.parentId ?? '',
       order: n.order,
+      icon: n.icon ?? '',
+      openMode: n.openMode,
+      permissions: n.permissions,
+    })),
+    extendedTabs: menu.extendedTabs.map((t) => ({
+      id: t.id,
+      label: t.label,
+      url: t.url,
+      page: t.page,
+      routeContains: t.routeContains ?? '',
+      referenceSelector: t.referenceSelector ?? '',
+      containerSelector: t.containerSelector ?? '',
+      permissions: t.permissions,
     })),
     toolCategories: menu.toolCategories
       .filter((c) => c.tools.length > 0)

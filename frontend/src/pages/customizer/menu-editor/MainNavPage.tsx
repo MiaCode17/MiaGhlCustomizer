@@ -20,18 +20,21 @@ export function MainNavPage() {
       />
 
       <Space direction="vertical" size={24} style={{ width: '100%' }}>
-        <Card title="Rename / hide native menu items" loading={loading}>
+        <Card title="Native menu items" loading={loading}>
           <RenameHideEditor
             renamed={menuEdit.renamed}
             hidden={menuEdit.hidden}
-            onChange={(renamed, hidden) => setMenuEdit({ ...menuEdit, renamed, hidden })}
+            hiddenByRole={menuEdit.hiddenByRole}
+            moved={menuEdit.moved}
+            onChange={(native) => setMenuEdit({ ...menuEdit, ...native })}
           />
         </Card>
 
         <Card title="Custom page navigation tree" loading={loading}>
           <Typography.Paragraph type="secondary">
-            Build a flat list of custom pages. Set a parent to nest an item, and use order to
-            control placement among siblings.
+            Add your own pages to the sidebar. Set a parent to nest an item under a folder (a folder is
+            an item with no URL, and collapses its children when clicked), use order to control
+            placement among siblings, and limit each item to the kinds of user who should see it.
           </Typography.Paragraph>
           <NavTreeEditor
             items={menuEdit.navTree}

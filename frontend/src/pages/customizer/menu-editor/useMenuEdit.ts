@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { message } from 'antd';
 import { menuEditorService } from '../../../services/menuEditorService';
-import { emptyMenuEdit, MenuEdit } from '../../../types/menuEdit';
+import { emptyMenuEdit, MenuEdit, normalizeMenuEdit } from '../../../types/menuEdit';
 
 export function useMenuEdit(groupId: string | undefined) {
   const [menuEdit, setMenuEdit] = useState<MenuEdit>(emptyMenuEdit);
@@ -14,7 +14,7 @@ export function useMenuEdit(groupId: string | undefined) {
     menuEditorService
       .get(groupId)
       .then((loaded) => {
-        if (!cancelled) setMenuEdit(loaded ?? emptyMenuEdit);
+        if (!cancelled) setMenuEdit(loaded ? normalizeMenuEdit(loaded) : emptyMenuEdit);
       })
       .catch(() => {
         if (!cancelled) message.error('Failed to load menu configuration');
@@ -31,7 +31,7 @@ export function useMenuEdit(groupId: string | undefined) {
     setSaving(true);
     try {
       const saved = await menuEditorService.save(menuEdit, groupId);
-      setMenuEdit(saved);
+      setMenuEdit(normalizeMenuEdit(saved));
       message.success('Menu configuration saved');
     } catch (err) {
       message.error(err instanceof Error ? err.message : 'Failed to save menu configuration');

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Button, Card, Space } from 'antd';
 import { AppstoreOutlined } from '@ant-design/icons';
 import { PageIntro } from '../../../components/PageIntro';
+import { ExtendedTabsEditor } from './ExtendedTabsEditor';
 import { ToolCategoriesEditor } from './ToolCategoriesEditor';
 import { useMenuEdit } from './useMenuEdit';
 
@@ -13,13 +14,20 @@ export function ExtendedNavPage() {
     <div className="pt-4">
       <PageIntro
         icon={<AppstoreOutlined />}
-        description="Group tools into custom categories for the embedded app's extended nav / launchpad."
+        description="Add tabs to the sub-navigation of GHL pages, and group tools into a sidebar Tools menu."
         groupId={groupId}
         onGroupChange={setGroupId}
       />
 
       <Space direction="vertical" size={24} style={{ width: '100%' }}>
-        <Card title="Extended nav tool categories" loading={loading}>
+        <Card title="Page tabs" loading={loading}>
+          <ExtendedTabsEditor
+            tabs={menuEdit.extendedTabs}
+            onChange={(extendedTabs) => setMenuEdit({ ...menuEdit, extendedTabs })}
+          />
+        </Card>
+
+        <Card title="Sidebar Tools menu" loading={loading}>
           <ToolCategoriesEditor
             categories={menuEdit.toolCategories}
             onChange={(toolCategories) => setMenuEdit({ ...menuEdit, toolCategories })}
