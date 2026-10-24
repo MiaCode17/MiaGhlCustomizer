@@ -208,7 +208,71 @@ export function buildConversationCss(
     .join('\n\n');
 }
 
-const LOGIN_LAYOUTS: Record<LoginPageConfigDoc['preset'], (s: typeof GHL_SELECTORS) => string[]> = {
+/** Appends a pseudo-element/state to every selector in a comma-separated list. */
+function withSuffix(selector: string, suffix: string): string {
+  return selector
+    .split(',')
+    .map((part) => part.trim() + suffix)
+    .join(', ');
+}
+
+const DEFAULT_SHAPE = 'polygon(0% 0%, 70% 0%, 85% 50%, 70% 100%, 0% 100%)';
+
+/** Flips a polygon() shape left-to-right, for the layout with the picture on the right. */
+export function mirrorClipPath(clipPath: string): string {
+  return clipPath.replace(/polygon\(([^)]+)\)/, (_match, coords: string) => {
+    const points = coords.split(',').map((point) => {
+      const [x, y] = point.trim().split(/\s+/);
+      const n = parseFloat(x ?? '');
+      return y !== undefined && /%$/.test(x ?? '') && Number.isFinite(n) ? `${(100 - n).toFixed(2)}% ${y}` : point.trim();
+    });
+    return `polygon(${points.join(', ')})`;
+  });
+}
+
+/** A picture (or gradient) panel cut to a shape on one side, with the form card on the other. */
+function shapeLayout(s: typeof GHL_SELECTORS, right: boolean, shape: string, hasImage: boolean): string[] {
+  const side = right ? 'right' : 'left';
+  const clip = right ? mirrorClipPath(shape) : shape;
+  return [
+    rule(s.loginRoot, {
+      position: 'relative',
+      overflow: 'hidden',
+      display: 'flex',
+      'align-items': 'center',
+      'justify-content': 'center',
+    }),
+    rule(withSuffix(s.loginRoot, '::before'), {
+      content: '""',
+      position: 'absolute',
+      top: '0',
+      [side]: '0',
+      width: 'var(--login-shape-width, 65%)',
+      height: '100%',
+      'background-image': hasImage ? 'var(--login-bg-image)' : 'var(--login-bg-gradient, linear-gradient(135deg, #6366f1, #8b5cf6))',
+      'background-size': 'cover',
+      'background-position': 'center',
+      'background-repeat': 'no-repeat',
+      '-webkit-clip-path': clip,
+      'clip-path': clip,
+    }),
+    rule(s.loginBody, {
+      position: 'relative',
+      'z-index': '1',
+      [`margin-${side === 'left' ? 'right' : 'left'}`]: '0',
+      [`margin-${side === 'left' ? 'left' : 'right'}`]: 'var(--login-shape-offset, 55%)',
+    }),
+    // On narrow screens there is no room for the picture: the card takes the whole page.
+    `@media (max-width: 1150px) {\n${rule(withSuffix(s.loginRoot, '::before'), { display: 'none' })}\n${rule(s.loginBody, { margin: '0 auto' })}\n}`,
+  ];
+}
+
+interface LoginLayoutContext {
+  shape: string;
+  hasImage: boolean;
+}
+
+const LOGIN_LAYOUTS: Record<LoginPageConfigDoc['preset'], (s: typeof GHL_SELECTORS, ctx: LoginLayoutContext) => string[]> = {
   centered: (s) => [
     rule(s.loginRoot, { display: 'flex', 'align-items': 'center', 'justify-content': 'center' }),
     rule(s.loginBody, { margin: '0 auto' }),
@@ -221,6 +285,8 @@ const LOGIN_LAYOUTS: Record<LoginPageConfigDoc['preset'], (s: typeof GHL_SELECTO
     rule(s.loginRoot, { display: 'grid', 'grid-template-columns': '1fr minmax(360px, 1fr)' }),
     rule(s.loginBody, { 'grid-column': '2', 'align-self': 'center', 'justify-self': 'center' }),
   ],
+  'shape-left': (s, c) => shapeLayout(s, false, c.shape, c.hasImage),
+  'shape-right': (s, c) => shapeLayout(s, true, c.shape, c.hasImage),
   'full-bleed': (s) => [
     rule(s.loginRoot, { display: 'flex', 'align-items': 'center', 'justify-content': 'center' }),
     rule(s.loginBody, {
@@ -251,6 +317,12 @@ export function buildLoginCss(
   vars['--login-logo'] ??= cssUrl(config.logoUrl);
   vars['--login-bg-image'] ??= cssUrl(config.backgroundImageUrl);
 
+  const isShape = config.preset === 'shape-left' || config.preset === 'shape-right';
+  const hasImage = Boolean(config.backgroundImageUrl);
+  // A gradient is only painted when the agency (or a design) declared one.
+  const gradient = vars['--login-bg-gradient'] ? 'var(--login-bg-gradient)' : undefined;
+  const layoutContext = { shape: vars['--login-shape'] || DEFAULT_SHAPE, hasImage };
+
   const declared = Object.entries(vars)
     .filter(([, v]) => v)
     .map(([k, v]) => `  ${k}: ${v};`)
@@ -261,12 +333,12 @@ export function buildLoginCss(
     rule(s.loginRoot, {
       'min-height': '100vh',
       'background-color': 'var(--login-bg-color, #f8fafc)',
-      'background-image': config.backgroundImageUrl ? 'var(--login-bg-image)' : undefined,
+      'background-image': isShape ? gradient : hasImage ? 'var(--login-bg-image)' : gradient,
       'background-size': 'cover',
       'background-position': 'center',
       'font-family': "var(--login-font, 'Inter', sans-serif)",
     }),
-    ...LOGIN_LAYOUTS[config.preset ?? 'centered'](s),
+    ...LOGIN_LAYOUTS[config.preset ?? 'centered'](s, layoutContext),
     rule(s.loginBody, {
       'border-radius': 'var(--login-card-radius, 16px)',
       'box-shadow': 'var(--login-card-shadow, 0 20px 50px rgba(15,23,42,0.18))',
@@ -293,6 +365,16 @@ export function buildLoginCss(
       'border-radius': 'var(--login-button-radius, 10px)',
     }),
     rule(s.loginLink, { color: 'var(--link-color, var(--primary-color, #4f46e5))' }),
+    // Optional polish, only when the design (or the agency) declares the variable.
+    vars['--login-button-gradient'] ? rule(s.loginButton, { 'background-image': 'var(--login-button-gradient)', border: 'none' }) : '',
+    vars['--login-card-hover-shadow']
+      ? `${rule(s.loginBody, { transition: 'transform .3s ease, box-shadow .3s ease' })}\n\n${rule(withSuffix(s.loginBody, ':hover'), { transform: 'translateY(-4px)', 'box-shadow': 'var(--login-card-hover-shadow)' })}`
+      : '',
+    vars['--login-focus-color']
+      ? rule(withSuffix(s.loginInput, ':focus'), { 'border-color': 'var(--login-focus-color)', 'box-shadow': '0 0 0 4px color-mix(in srgb, var(--login-focus-color) 18%, transparent)', outline: 'none' })
+      : '',
+    vars['--login-input-bg'] ? rule(s.loginInput, { 'background-color': 'var(--login-input-bg)' }) : '',
+    vars['--login-text-color'] ? rule(withSuffix(s.loginRoot, ' label, .hl_login h1, .hl_login h2, .hl_login .heading2'), { color: 'var(--login-text-color)' }) : '',
     config.customCss?.trim() ? `/* custom */\n${config.customCss.trim()}` : '',
   ];
 

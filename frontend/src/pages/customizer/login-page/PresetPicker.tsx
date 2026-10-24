@@ -11,6 +11,8 @@ const PRESETS: PresetOption[] = [
   { value: 'split-right', label: 'Split right' },
   { value: 'centered', label: 'Centered' },
   { value: 'full-bleed', label: 'Full bleed' },
+  { value: 'shape-left', label: 'Picture shape, left' },
+  { value: 'shape-right', label: 'Picture shape, right' },
 ];
 
 interface PresetPickerProps {
@@ -43,6 +45,26 @@ function PresetDiagram({ preset }: { preset: LoginPagePreset }) {
       <div style={frameStyle}>
         <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: '45%', background: '#1677ff' }} />
         <div style={{ position: 'absolute', left: '10%', top: '35%', width: '30%', height: '30%', background: '#f0f0f0', borderRadius: 2 }} />
+      </div>
+    );
+  }
+
+  if (preset === 'shape-left' || preset === 'shape-right') {
+    const right = preset === 'shape-right';
+    return (
+      <div style={frameStyle}>
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            bottom: 0,
+            [right ? 'right' : 'left']: 0,
+            width: '60%',
+            background: '#1677ff',
+            clipPath: right ? 'polygon(100% 0%, 30% 0%, 15% 50%, 30% 100%, 100% 100%)' : 'polygon(0% 0%, 70% 0%, 85% 50%, 70% 100%, 0% 100%)',
+          }}
+        />
+        <div style={{ position: 'absolute', [right ? 'left' : 'right']: '8%', top: '30%', width: '28%', height: '40%', background: '#f0f0f0', borderRadius: 2 }} />
       </div>
     );
   }
