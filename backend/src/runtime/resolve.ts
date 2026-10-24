@@ -120,6 +120,27 @@ const resolveButtons: Resolver = async (companyId, groupId) => {
       shadow: b.shadow,
       animation: b.animation,
       fullWidth: b.fullWidth,
+      openMode: b.openMode,
+      iconOnly: b.iconOnly,
+      iconSize: b.iconSize,
+      uppercase: b.uppercase,
+      bold: b.bold,
+      underline: b.underline,
+      hoverEffect: b.hoverEffect,
+      gradient: b.gradient,
+      gradientColor: b.gradientColor ?? '',
+      opacity: b.opacity,
+      permissions: b.permissions,
+      sendContact: b.sendContact,
+      sendCustomFields: b.sendCustomFields,
+      menuItems: b.menuItems.map((m) => ({
+        label: m.label,
+        url: m.url,
+        openMode: m.openMode,
+        sendContact: m.sendContact,
+        sendCustomFields: m.sendCustomFields,
+      })),
+      placementSelector: b.placementSelector ?? '',
     });
   }
   return { enabled: true, surfaces: bySurface };

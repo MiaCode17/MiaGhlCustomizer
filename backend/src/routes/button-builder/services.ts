@@ -21,6 +21,21 @@ export interface InjectedButtonInput {
   shadow: InjectedButtonDoc['shadow'];
   animation: InjectedButtonDoc['animation'];
   fullWidth: boolean;
+  openMode: InjectedButtonDoc['openMode'];
+  iconOnly: boolean;
+  iconSize: InjectedButtonDoc['iconSize'];
+  uppercase: boolean;
+  bold: boolean;
+  underline: boolean;
+  hoverEffect: boolean;
+  gradient: boolean;
+  gradientColor?: string;
+  opacity: number;
+  permissions: InjectedButtonDoc['permissions'];
+  sendContact: boolean;
+  sendCustomFields: boolean;
+  menuItems: InjectedButtonDoc['menuItems'];
+  placementSelector?: string;
 }
 
 export async function listButtons(

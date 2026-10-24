@@ -517,6 +517,7 @@
     '.mgc-anim-shimmer{background-image:linear-gradient(110deg,transparent 30%,rgba(255,255,255,.45) 50%,transparent 70%)!important;background-size:200% 100%!important;animation:mgc-shimmer 2.2s linear infinite}',
     '.mgc-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;font:inherit;font-weight:500;white-space:nowrap;text-decoration:none;box-sizing:border-box;transition:filter .15s ease,transform .15s ease}',
     '.mgc-btn:hover{filter:brightness(1.07)}',
+    '.mgc-btn.mgc-nohover:hover{filter:none}',
     '.mgc-btn:active{transform:translateY(1px)}',
     '.mgc-overlay{position:fixed;inset:0;z-index:2147483000;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;animation:mgc-fade-in .18s ease}',
     '@keyframes mgc-slide-right{from{transform:translateX(100%)}to{transform:none}}',
@@ -531,9 +532,13 @@
     large: { height: '40px', padding: '0 18px', 'font-size': '16px' },
   };
 
+  var ICON_SIZES = { small: 12, medium: 16, large: 20 };
+
   /**
    * Builds a styled button from the shared button config shape (InjectedButton):
-   * style variant, size, colors, border, radius, shadow, animation, icon, tooltip.
+   * style variant, size, colors, border, radius, shadow, animation, icon, tooltip,
+   * plus the optional extras: iconOnly, iconSize, uppercase, bold, underline,
+   * hoverEffect (false disables the hover lift), gradient/gradientColor, opacity.
    */
   C.button = function (cfg, feature, onClick) {
     var variant = cfg.style || 'default';
@@ -556,11 +561,20 @@
       'box-shadow': C.shadow(cfg.shadow),
       width: cfg.fullWidth ? '100%' : '',
     });
+    if (cfg.gradient && cfg.gradientColor) {
+      style['background'] = 'linear-gradient(135deg,' + (cfg.backgroundColor || base.bg) + ',' + cfg.gradientColor + ')';
+    }
+    if (cfg.opacity != null && cfg.opacity < 100) style.opacity = String(Math.max(0, cfg.opacity) / 100);
+    if (cfg.uppercase) style['text-transform'] = 'uppercase';
+    if (cfg.bold) style['font-weight'] = '700';
+    if (cfg.underline) style['text-decoration'] = 'underline';
 
-    var icon = C.icon(cfg.icon, 16);
-    var label = cfg.label ? C.h('span', { text: cfg.label }) : null;
+    var icon = C.icon(cfg.icon, ICON_SIZES[cfg.iconSize] || 16);
+    var showLabel = cfg.label && !(cfg.iconOnly && icon);
+    var label = showLabel ? C.h('span', { text: cfg.label }) : null;
     var children = cfg.iconPosition === 'right' ? [label, icon] : [icon, label];
     var anim = cfg.animation && cfg.animation !== 'none' ? ' mgc-anim-' + cfg.animation : '';
+    if (cfg.hoverEffect === false) anim += ' mgc-nohover';
 
     var btn = C.h(
       'button',
@@ -694,6 +708,88 @@
       ],
     );
     document.body.appendChild(C.mark(C.h('div', { className: 'mgc-overlay', on: { click: close } }, [panel]), 'modal'));
+  };
+
+  /**
+   * Small floating menu anchored under (or above, near the bottom edge) an element.
+   * entries: [{ label, onClick }]. Closes on outside click, Escape, or after a pick.
+   * Returns a close function.
+   */
+  C.popover = function (anchor, entries) {
+    C.removeMarked('popover');
+    var rect = anchor.getBoundingClientRect();
+    var below = window.innerHeight - rect.bottom > 40 + entries.length * 36 || rect.top < 200;
+    var style = {
+      position: 'fixed',
+      'z-index': '2147482990',
+      background: '#fff',
+      'border-radius': '10px',
+      'box-shadow': '0 12px 32px rgba(0,0,0,.2)',
+      padding: '6px',
+      'min-width': Math.max(180, Math.round(rect.width)) + 'px',
+      font: '14px/1.4 system-ui, -apple-system, sans-serif',
+      animation: 'mgc-fade-in .15s ease',
+      left: Math.max(8, Math.min(rect.left, window.innerWidth - 220)) + 'px',
+    };
+    if (below) style.top = rect.bottom + 6 + 'px';
+    else style.bottom = window.innerHeight - rect.top + 6 + 'px';
+
+    function close() {
+      document.removeEventListener('mousedown', onOutside, true);
+      document.removeEventListener('keydown', onKey);
+      C.removeMarked('popover');
+    }
+    function onOutside(e) {
+      if (!menu.contains(e.target) && !anchor.contains(e.target)) close();
+    }
+    function onKey(e) {
+      if (e.key === 'Escape') close();
+    }
+
+    var menu = C.mark(
+      C.h(
+        'div',
+        { style: style, attrs: { role: 'menu' } },
+        entries.map(function (entry) {
+          return C.h('button', {
+            text: entry.label,
+            attrs: { type: 'button', role: 'menuitem' },
+            style: {
+              display: 'block',
+              width: '100%',
+              'text-align': 'left',
+              padding: '8px 10px',
+              border: '0',
+              background: 'transparent',
+              'border-radius': '6px',
+              cursor: 'pointer',
+              color: '#111827',
+              font: 'inherit',
+            },
+            on: {
+              mouseenter: function (e) {
+                e.currentTarget.style.background = '#f3f4f6';
+              },
+              mouseleave: function (e) {
+                e.currentTarget.style.background = 'transparent';
+              },
+              click: function () {
+                close();
+                if (entry.onClick) entry.onClick();
+              },
+            },
+          });
+        }),
+      ),
+      'popover',
+    );
+    document.body.appendChild(menu);
+    // Registered on the next tick so the click that opened the menu doesn't close it.
+    setTimeout(function () {
+      document.addEventListener('mousedown', onOutside, true);
+      document.addEventListener('keydown', onKey);
+    }, 0);
+    return close;
   };
 
   /**
@@ -1023,6 +1119,7 @@
     Object.keys(C.active).forEach(teardownFeature);
     C.removeMarked('modal');
     C.removeMarked('drawer');
+    C.removeMarked('popover');
   }
 
   /* ------------------------------------------------------------ bootstrap */

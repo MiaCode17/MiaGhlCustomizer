@@ -5,7 +5,7 @@ import { Theme, defaultSidebarStyle } from '../types/theme';
 import { SpecialTheme } from '../types/specialTheme';
 import { LogoCampaign, LogoCampaignInput } from '../types/logo';
 import { LoginPageConfig } from '../types/loginPage';
-import { ButtonSurface, InjectedButton, InjectedButtonInput } from '../types/button';
+import { ButtonSurface, InjectedButton, InjectedButtonInput, buttonBehaviorDefaults } from '../types/button';
 import { FloatingButton, FloatingButtonInput } from '../types/floatingButton';
 import { DynamicLink, DynamicLinkInput } from '../types/dynamicLink';
 import { MenuEdit } from '../types/menuEdit';
@@ -151,6 +151,7 @@ const BUTTON_STYLE_KIT_DEFAULTS = {
   shadow: 'none' as const,
   animation: 'none' as const,
   fullWidth: false,
+  ...buttonBehaviorDefaults(),
 };
 
 const buttons: InjectedButton[] = [

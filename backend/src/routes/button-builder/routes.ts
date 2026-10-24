@@ -16,6 +16,25 @@ const BUTTON_SURFACES: ButtonSurface[] = [
   'record-tab',
 ];
 
+const openModeSchema = z.enum(['modal', 'drawer', 'new-tab', 'same-tab']);
+
+const permissionsSchema = z
+  .object({
+    agency_admins: z.boolean(),
+    agency_users: z.boolean(),
+    account_admins: z.boolean(),
+    account_users: z.boolean(),
+  })
+  .default({ agency_admins: true, agency_users: true, account_admins: true, account_users: true });
+
+const menuItemSchema = z.object({
+  label: z.string().trim().min(1),
+  url: z.string().trim().min(1),
+  openMode: openModeSchema.default('new-tab'),
+  sendContact: z.boolean().default(false),
+  sendCustomFields: z.boolean().default(false),
+});
+
 const buttonInputSchema = z.object({
   surface: z.enum(['header', 'dashboard', 'contact', 'opportunity', 'record-detail', 'record-tab']),
   label: z.string().min(1),
@@ -34,6 +53,21 @@ const buttonInputSchema = z.object({
   shadow: z.enum(['none', 'sm', 'md', 'lg']).default('none'),
   animation: z.enum(['none', 'pulse', 'bounce', 'shimmer']).default('none'),
   fullWidth: z.boolean().default(false),
+  openMode: openModeSchema.default('new-tab'),
+  iconOnly: z.boolean().default(false),
+  iconSize: z.enum(['small', 'medium', 'large']).default('medium'),
+  uppercase: z.boolean().default(false),
+  bold: z.boolean().default(false),
+  underline: z.boolean().default(false),
+  hoverEffect: z.boolean().default(true),
+  gradient: z.boolean().default(false),
+  gradientColor: z.string().optional(),
+  opacity: z.number().min(0).max(100).default(100),
+  permissions: permissionsSchema,
+  sendContact: z.boolean().default(false),
+  sendCustomFields: z.boolean().default(false),
+  menuItems: z.array(menuItemSchema).max(20).default([]),
+  placementSelector: z.string().trim().max(300).optional(),
 });
 
 function getGroupId(req: { query: { groupId?: unknown } }): string | undefined {
