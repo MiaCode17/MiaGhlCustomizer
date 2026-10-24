@@ -21,6 +21,11 @@ const MakeYourOwnThemePage = lazy(() =>
     default: m.MakeYourOwnThemePage,
   })),
 );
+const PremiumThemePage = lazy(() =>
+  import('../pages/customizer/theme-builder/PremiumThemePage').then((m) => ({
+    default: m.PremiumThemePage,
+  })),
+);
 const SpecialThemePage = lazy(() =>
   import('../pages/customizer/special-theme/SpecialThemePage').then((m) => ({
     default: m.SpecialThemePage,
@@ -176,6 +181,7 @@ export const routes: RouteObject[] = [
     children: [
       { path: '/miaghlcustomizer/theme/categories', element: lazyPage(<ThemeCategoriesPage />) },
       { path: '/miaghlcustomizer/theme/occasional', element: lazyPage(<SpecialThemePage />) },
+      { path: '/miaghlcustomizer/theme/premium', element: lazyPage(<PremiumThemePage />) },
       { path: '/miaghlcustomizer/theme/sidebar-styling', element: lazyPage(<SidebarStylingPage />) },
       { path: '/miaghlcustomizer/theme/make-your-own', element: lazyPage(<MakeYourOwnThemePage />) },
       { path: '/miaghlcustomizer/logo', element: lazyPage(<LogoPage />) },

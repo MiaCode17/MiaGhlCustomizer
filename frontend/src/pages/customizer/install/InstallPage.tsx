@@ -9,6 +9,7 @@ import { RuntimeConfig } from '../../../types/runtime';
 const FEATURE_LABELS: Record<string, string> = {
   theme: 'Theme',
   'special-theme': 'Occasional theme',
+  'premium-theme': 'Premium theme',
   logo: 'Logo',
   buttons: 'Page buttons',
   'floating-buttons': 'Side / bottom buttons',

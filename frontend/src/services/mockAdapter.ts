@@ -12,6 +12,7 @@ import { allRoles, MenuEdit } from '../types/menuEdit';
 import { CustomFieldCampaign, CustomFieldCampaignInput } from '../types/customField';
 import { Banner, BannerInput } from '../types/banner';
 import { ChatBubbleConfig, emptyChatBubbleConfig } from '../types/chatBubble';
+import type { PremiumThemeSettings } from './premiumThemeService';
 import { FeedbackConfig, FeedbackResponse, FeedbackStats, emptyFeedbackConfig } from '../types/feedback';
 import { GuideSettings, Tour, TourInput, emptyGuideSettings } from '../types/guide';
 import { SupportMessage, SupportTicket } from '../types/supportChat';
@@ -103,6 +104,8 @@ let theme: Theme = {
   sidebarStyle: defaultSidebarStyle,
   enabled: true,
 };
+
+let premiumTheme: PremiumThemeSettings | null = null;
 
 let specialTheme: SpecialTheme = {
   enabled: true,
@@ -623,6 +626,14 @@ export const mockAdapter = async (
     return respond(config, { theme });
   }
 
+  if (method === 'get' && path === '/premium-theme') {
+    return respond(config, { premiumTheme });
+  }
+  if (method === 'put' && path === '/premium-theme/update') {
+    premiumTheme = body as PremiumThemeSettings;
+    return respond(config, { premiumTheme });
+  }
+
   if (method === 'get' && path === '/special-theme') {
     return respond(config, { specialTheme });
   }
@@ -1046,7 +1057,8 @@ export const mockAdapter = async (
     return respond(config, {
       groupId,
       features: {
-        theme: { enabled: theme.enabled },
+        theme: { enabled: theme.enabled && !premiumTheme?.enabled },
+        'premium-theme': { enabled: Boolean(premiumTheme?.enabled && premiumTheme.theme), theme: premiumTheme?.theme ?? null },
         'special-theme': { enabled: specialTheme.enabled },
         logo: on,
         buttons: on,

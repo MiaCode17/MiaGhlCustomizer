@@ -14,6 +14,7 @@ import { LoaderConfig } from '../models/LoaderConfig';
 import { LogoCampaign } from '../models/LogoCampaign';
 import { MenuEdit } from '../models/MenuEdit';
 import { MiscSettings } from '../models/MiscSettings';
+import { PremiumTheme } from '../models/PremiumTheme';
 import { SpecialTheme } from '../models/SpecialTheme';
 import { GuideSettings, Tour } from '../models/Tour';
 import { Theme } from '../models/Theme';
@@ -62,7 +63,20 @@ async function findScopedList<T extends ScopedDoc>(
   return model.find({ companyId, groupId: '', ...extra } as FilterQuery<T>).sort(sort).lean<T[]>();
 }
 
+/** The premium theme in force for this group, if one is switched on. */
+async function activePremiumTheme(companyId: Types.ObjectId, groupId: string) {
+  const premium = await findScoped(PremiumTheme, companyId, groupId);
+  return premium?.enabled && premium.theme ? premium : null;
+}
+
+const resolvePremiumTheme: Resolver = async (companyId, groupId) => {
+  const premium = await activePremiumTheme(companyId, groupId);
+  return premium ? { enabled: true, theme: premium.theme } : DISABLED;
+};
+
 const resolveTheme: Resolver = async (companyId, groupId) => {
+  // A premium theme replaces the classic one: both paint the same elements and would fight.
+  if (await activePremiumTheme(companyId, groupId)) return DISABLED;
   const theme = await findScoped(Theme, companyId, groupId);
   if (!theme?.enabled) return DISABLED;
   return {
@@ -568,6 +582,7 @@ const resolveCustomFields: Resolver = async (companyId, groupId) => {
  */
 export const RUNTIME_FEATURES = {
   theme: resolveTheme,
+  'premium-theme': resolvePremiumTheme,
   'special-theme': resolveSpecialTheme,
   logo: resolveLogo,
   buttons: resolveButtons,

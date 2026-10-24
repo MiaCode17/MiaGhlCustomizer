@@ -40,6 +40,7 @@ const NAV_ITEMS: NavItem[] = [
     label: 'Custom Themes',
     children: [
       { key: '/miaghlcustomizer/theme/categories', label: 'Theme Categories' },
+      { key: '/miaghlcustomizer/theme/premium', label: 'Premium Themes' },
       { key: '/miaghlcustomizer/theme/occasional', label: 'Occasional Themes' },
       { key: '/miaghlcustomizer/theme/sidebar-styling', label: 'Sidebar Styling' },
       { key: '/miaghlcustomizer/theme/make-your-own', label: 'Make Your Own' },
