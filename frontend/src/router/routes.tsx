@@ -111,6 +111,19 @@ const ChatBubblePage = lazy(() =>
 const ChatInboxPage = lazy(() =>
   import('../pages/customizer/chat-bubble/ChatInboxPage').then((m) => ({ default: m.ChatInboxPage })),
 );
+const ToursPage = lazy(() =>
+  import('../pages/customizer/guides/ToursPage').then((m) => ({ default: m.ToursPage })),
+);
+const FeedbackSettingsPage = lazy(() =>
+  import('../pages/customizer/feedback/FeedbackSettingsPage').then((m) => ({
+    default: m.FeedbackSettingsPage,
+  })),
+);
+const FeedbackResponsesPage = lazy(() =>
+  import('../pages/customizer/feedback/FeedbackResponsesPage').then((m) => ({
+    default: m.FeedbackResponsesPage,
+  })),
+);
 const LoaderPage = lazy(() =>
   import('../pages/customizer/loader/LoaderPage').then((m) => ({ default: m.LoaderPage })),
 );
@@ -183,6 +196,9 @@ export const routes: RouteObject[] = [
       { path: '/miaghlcustomizer/custom-fields', element: lazyPage(<CustomFieldsPage />) },
       { path: '/miaghlcustomizer/engagement/chat-manager', element: lazyPage(<ChatBubblePage />) },
       { path: '/miaghlcustomizer/engagement/inbox', element: lazyPage(<ChatInboxPage />) },
+      { path: '/miaghlcustomizer/engagement/tours', element: lazyPage(<ToursPage />) },
+      { path: '/miaghlcustomizer/engagement/feedback', element: lazyPage(<FeedbackSettingsPage />) },
+      { path: '/miaghlcustomizer/engagement/feedback-responses', element: lazyPage(<FeedbackResponsesPage />) },
       { path: '/miaghlcustomizer/engagement/loader', element: lazyPage(<LoaderPage />) },
       { path: '/miaghlcustomizer/engagement/banners', element: lazyPage(<BannersPage />) },
       {

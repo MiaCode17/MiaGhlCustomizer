@@ -81,6 +81,9 @@ const NAV_ITEMS: NavItem[] = [
     children: [
       { key: '/miaghlcustomizer/engagement/chat-manager', label: 'Chat Manager' },
       { key: '/miaghlcustomizer/engagement/inbox', label: 'Chat Inbox' },
+      { key: '/miaghlcustomizer/engagement/tours', label: 'Guided Tours' },
+      { key: '/miaghlcustomizer/engagement/feedback', label: 'Feedback' },
+      { key: '/miaghlcustomizer/engagement/feedback-responses', label: 'Feedback Responses' },
       { key: '/miaghlcustomizer/engagement/loader', label: 'Loader' },
       { key: '/miaghlcustomizer/engagement/banners', label: 'Banners' },
       { key: '/miaghlcustomizer/engagement/conversations', label: 'Conversation Customization' },

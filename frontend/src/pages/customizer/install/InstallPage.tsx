@@ -26,6 +26,8 @@ const FEATURE_LABELS: Record<string, string> = {
   'opportunity-tabs': 'Opportunity tabs',
   launchpad: 'Launchpad tiles',
   'user-links': 'Sub-account links',
+  guides: 'Guided tours',
+  feedback: 'Feedback & cancellation survey',
 };
 
 async function copy(text: string) {

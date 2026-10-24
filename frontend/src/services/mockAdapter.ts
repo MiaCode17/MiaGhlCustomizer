@@ -12,6 +12,8 @@ import { allRoles, MenuEdit } from '../types/menuEdit';
 import { CustomFieldCampaign, CustomFieldCampaignInput } from '../types/customField';
 import { Banner, BannerInput } from '../types/banner';
 import { ChatBubbleConfig, emptyChatBubbleConfig } from '../types/chatBubble';
+import { FeedbackConfig, FeedbackResponse, FeedbackStats, emptyFeedbackConfig } from '../types/feedback';
+import { GuideSettings, Tour, TourInput, emptyGuideSettings } from '../types/guide';
 import { SupportMessage, SupportTicket } from '../types/supportChat';
 import { LoaderConfig } from '../types/loader';
 import { LaunchpadTile, LaunchpadTileInput } from '../types/launchpad';
@@ -501,6 +503,57 @@ let groups: Group[] = [
   },
 ];
 
+let tours: Tour[] = [
+  {
+    _id: 'tour-1',
+    companyId: MOCK_COMPANY_ID,
+    groupId: '',
+    name: 'Welcome to your dashboard',
+    enabled: true,
+    pages: [],
+    autoStart: 'first-visit',
+    order: 0,
+    permissions: { agency_admins: true, agency_users: true, account_admins: true, account_users: true },
+    steps: [
+      { title: 'Welcome', content: 'A quick look around.', selector: '', clickSelector: '', placement: 'center', mediaType: 'none', mediaUrl: '', ctaLabel: '', ctaUrl: '' },
+      { title: 'Contacts', content: 'Your people live here.', selector: '#sb_contacts', clickSelector: '', placement: 'auto', mediaType: 'none', mediaUrl: '', ctaLabel: '', ctaUrl: '' },
+    ],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+];
+let guideSettings: GuideSettings = { ...emptyGuideSettings };
+let feedbackConfig: FeedbackConfig = { ...emptyFeedbackConfig };
+const feedbackResponses: FeedbackResponse[] = [
+  { id: 'fr-1', kind: 'rating', ratingType: 'stars', rating: 5, comment: 'Love the new look', reasons: [], userName: 'Ann Lee', userEmail: 'ann@example.com', locationId: 'LOC1', ticketId: null, createdAt: new Date().toISOString() },
+  { id: 'fr-2', kind: 'cancellation', ratingType: null, rating: null, comment: '', reasons: ['Too expensive'], userName: 'Bo Chan', userEmail: 'bo@example.com', locationId: 'LOC2', ticketId: null, createdAt: new Date().toISOString() },
+];
+
+function mockFeedbackStats(): FeedbackStats {
+  const rated = feedbackResponses.filter((r) => r.rating !== null);
+  const distribution = [0, 0, 0, 0, 0];
+  rated.forEach((r) => {
+    const stars = r.ratingType === 'ten' ? (r.rating ?? 0) / 2 : (r.rating ?? 0);
+    distribution[Math.min(5, Math.max(1, Math.ceil(stars))) - 1] += 1;
+  });
+  const reasons = new Map<string, number>();
+  feedbackResponses.forEach((r) => r.reasons.forEach((x) => reasons.set(x, (reasons.get(x) ?? 0) + 1)));
+  const byDay = Array.from({ length: 30 }, (_, i) => ({
+    date: new Date(Date.now() - (29 - i) * 86400000).toISOString().slice(0, 10),
+    count: i === 29 ? feedbackResponses.length : 0,
+  }));
+  return {
+    total: feedbackResponses.length,
+    rating: { count: rated.length, average: rated.length ? rated.reduce((s, r) => s + (r.rating ?? 0), 0) / rated.length : null, distribution },
+    chat: { count: 0, average: null },
+    cancellation: {
+      count: feedbackResponses.filter((r) => r.kind === 'cancellation').length,
+      reasons: [...reasons].map(([reason, count]) => ({ reason, count })),
+    },
+    byDay,
+  };
+}
+
 function parseBody(config: InternalAxiosRequestConfig): unknown {
   const data: unknown = config.data;
   if (data === undefined || data === null) return undefined;
@@ -869,6 +922,64 @@ export const mockAdapter = async (
     return respond(config, {});
   }
 
+  if (method === 'get' && path === '/guides/tours') {
+    return respond(config, { tours });
+  }
+  if (method === 'post' && path === '/guides/tours') {
+    const tour: Tour = { _id: nextId('tour'), companyId: MOCK_COMPANY_ID, groupId: '', ...(body as TourInput), createdAt: nowIso(), updatedAt: nowIso() };
+    tours = [...tours, tour];
+    return respond(config, { tour }, 201);
+  }
+  if (method === 'put' && path.startsWith('/guides/tours/')) {
+    const id = path.slice('/guides/tours/'.length);
+    tours = tours.map((t) => (t._id === id ? { ...t, ...(body as TourInput), updatedAt: nowIso() } : t));
+    return respond(config, { tour: tours.find((t) => t._id === id) });
+  }
+  if (method === 'delete' && path.startsWith('/guides/tours/')) {
+    const id = path.slice('/guides/tours/'.length);
+    tours = tours.filter((t) => t._id !== id);
+    return respond(config, null, 204);
+  }
+  if (method === 'get' && path === '/guides/settings') {
+    return respond(config, { settings: guideSettings });
+  }
+  if (method === 'put' && path === '/guides/settings/update') {
+    guideSettings = body as GuideSettings;
+    return respond(config, { settings: guideSettings });
+  }
+
+  if (method === 'get' && path === '/feedback/config') {
+    return respond(config, { config: feedbackConfig });
+  }
+  if (method === 'put' && path === '/feedback/config/update') {
+    feedbackConfig = body as FeedbackConfig;
+    return respond(config, { config: feedbackConfig });
+  }
+  if (method === 'get' && path === '/feedback/responses') {
+    const kind = query.kind && query.kind !== 'all' ? query.kind : null;
+    const needle = (query.search ?? '').toLowerCase();
+    const rows = feedbackResponses.filter(
+      (r) => (!kind || r.kind === kind) && (!needle || (r.comment + ' ' + r.userName + ' ' + r.userEmail).toLowerCase().includes(needle)),
+    );
+    return respond(config, { responses: rows, total: rows.length, page: 1, limit: 25 });
+  }
+  if (method === 'get' && path === '/feedback/stats') {
+    return respond(config, { stats: mockFeedbackStats() });
+  }
+  if (method === 'get' && path === '/feedback/export') {
+    const cell = (v: unknown) => '"' + String(v).replace(/"/g, '""') + '"';
+    const lines = feedbackResponses.map((r) =>
+      [r.createdAt, r.kind, r.rating ?? '', r.reasons.join('; '), r.comment, r.userName, r.userEmail].map(cell).join(','),
+    );
+    return respond(config, ['When,Type,Rating,Reasons,Comment,Name,Email', ...lines].join('\n'));
+  }
+  if (method === 'delete' && path.startsWith('/feedback/responses/')) {
+    const id = path.slice('/feedback/responses/'.length);
+    const i = feedbackResponses.findIndex((r) => r.id === id);
+    if (i !== -1) feedbackResponses.splice(i, 1);
+    return respond(config, null, 204);
+  }
+
   if (method === 'get' && path === '/chat-bubble') {
     return respond(config, { chatBubble });
   }
@@ -954,6 +1065,8 @@ export const mockAdapter = async (
         'opportunity-tabs': { enabled: buttons.some((b) => b.surface === 'opportunity-tab') },
         launchpad: { enabled: launchpadTiles.length > 0 },
         'user-links': { enabled: miscSettings.userLinks.enabled && Boolean(query.locationId) },
+        guides: { enabled: tours.some((t) => t.enabled) && guideSettings.enabled },
+        feedback: { enabled: feedbackConfig.enabled || feedbackConfig.cancel.enabled },
       },
     });
   }
