@@ -18,6 +18,7 @@ import { loginPageRouter } from './login-page/routes';
 import { menuEditorRouter } from './menu-editor/routes';
 import { miscSettingsRouter } from './misc-settings/routes';
 import { specialThemeRouter } from './special-theme/routes';
+import { supportChatRouter } from './support-chat/routes';
 import { themeRouter } from './theme/routes';
 import { uploadsRouter } from './uploads/routes';
 
@@ -43,4 +44,5 @@ apiRouter.use('/conversation-style', conversationStyleRouter);
 apiRouter.use('/loader', loaderRouter);
 apiRouter.use('/launchpad', launchpadRouter);
 apiRouter.use('/location-links', locationLinksRouter);
+apiRouter.use('/support-chat', supportChatRouter);
 apiRouter.use('/misc-settings', miscSettingsRouter);

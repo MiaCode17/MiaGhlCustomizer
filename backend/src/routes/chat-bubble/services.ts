@@ -2,17 +2,11 @@ import { Types } from 'mongoose';
 import { ChatBubbleConfig, ChatBubbleConfigDoc } from '../../models/ChatBubbleConfig';
 import { findScoped } from '../../utils/scope';
 
-export interface ChatBubbleConfigInput {
-  enabled: boolean;
-  title: string;
-  subtitle: string;
-  gradientFrom: string;
-  gradientTo: string;
-  welcomeMessage: string;
-  successMessage: string;
-  errorMessage: string;
-  quickActions: ChatBubbleConfigDoc['quickActions'];
-}
+/** Everything the admin can set; identity, scope and timestamps are managed by the server. */
+export type ChatBubbleConfigInput = Omit<
+  ChatBubbleConfigDoc,
+  '_id' | 'companyId' | 'groupId' | 'createdAt' | 'updatedAt'
+>;
 
 export async function getChatBubbleConfig(companyId: Types.ObjectId, groupId?: string) {
   return findScoped(ChatBubbleConfig, companyId, groupId);

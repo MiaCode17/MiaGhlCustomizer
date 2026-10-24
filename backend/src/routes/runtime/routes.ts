@@ -1,7 +1,5 @@
 import express, { Request, Router } from 'express';
 import { z } from 'zod';
-import { Types } from 'mongoose';
-import { env } from '../../config/env';
 import { asyncHandler } from '../../middleware/asyncHandler';
 import { HttpError } from '../../middleware/errorHandler';
 import { Company } from '../../models/Company';
@@ -22,6 +20,8 @@ import {
 import { getUnreadCount, LOCATION_ID } from '../../runtime/unread';
 import { findScoped, resolveGroupId } from '../../utils/scope';
 import { buildRouter, RouteDef } from '../routeTable';
+import { chatRoutes } from './chatRoutes';
+import { apiBase, locationContext, resolveCompanyId } from './common';
 
 /**
  * Public, unauthenticated endpoints called from inside the live GHL portal by
@@ -30,40 +30,6 @@ import { buildRouter, RouteDef } from '../routeTable';
  * groups. Mounted with open CORS in server.ts since GHL runs on each agency's
  * own white-label domain.
  */
-
-const OBJECT_ID = /^[a-f0-9]{24}$/i;
-const GHL_ID = /^[A-Za-z0-9]{1,64}$/;
-
-/**
- * Accepts either our internal company _id or the agency's GHL company ID, so the
- * install snippet can use the ID agencies already know from GHL.
- */
-async function resolveCompanyId(raw: unknown): Promise<Types.ObjectId> {
-  if (typeof raw === 'string' && OBJECT_ID.test(raw)) {
-    return new Types.ObjectId(raw);
-  }
-  if (typeof raw !== 'string' || !GHL_ID.test(raw)) {
-    throw new HttpError(400, 'A valid company_id is required');
-  }
-  const company = await Company.findOne({ ghlCompanyId: raw }).select('_id').lean();
-  if (!company) {
-    throw new HttpError(404, 'No account is linked to this GHL company ID');
-  }
-  return company._id;
-}
-
-function queryString(req: Request, key: string): string | undefined {
-  const raw = req.query[key];
-  return typeof raw === 'string' && raw.trim().length > 0 ? raw.trim() : undefined;
-}
-
-function locationContext(req: Request) {
-  return { locationId: queryString(req, 'locationId'), planId: queryString(req, 'planId') };
-}
-
-function apiBase(req: Request): string {
-  return env.PUBLIC_BASE_URL ?? `${req.protocol}://${req.get('host')}`;
-}
 
 const OBJECT_ID_ONLY = /^[a-f0-9]{24}$/i;
 
@@ -104,6 +70,7 @@ async function authoriseLinkWrite(req: Request) {
 const jsonBody = express.json({ limit: '10kb' });
 
 const runtimeRoutes: RouteDef[] = [
+  ...chatRoutes,
   {
     // The links users of a location created for themselves (public, like the rest of the runtime).
     method: 'get',
