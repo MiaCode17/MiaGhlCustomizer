@@ -1167,6 +1167,162 @@
     });
   };
 
+  /* -------------------------------------------------------------- rating input */
+
+  var EMOJI_RATINGS = [
+    ['😡', 'Very unhappy'],
+    ['🙁', 'Unhappy'],
+    ['😐', 'Neutral'],
+    ['🙂', 'Happy'],
+    ['😍', 'Very happy'],
+  ];
+
+  /**
+   * A rating control: five stars (type "stars"), five faces ("emoji") or the numbers 1 to 10
+   * ("ten"). onChange receives the chosen number; `initial` preselects one (to keep a choice across
+   * a re-render). Returns { el, value() }.
+   */
+  C.ratingWidget = function (type, onChange, accent, initial) {
+    accent = accent || '#4f46e5';
+    var count = type === 'ten' ? 10 : 5;
+    var value = initial > 0 && initial <= count ? initial : 0;
+    var hover = 0;
+    var group = C.h('div', {
+      attrs: { role: 'radiogroup', 'aria-label': 'Rating' },
+      style: { display: 'flex', 'justify-content': 'center', 'flex-wrap': 'wrap', gap: type === 'ten' ? '6px' : '4px' },
+    });
+    var buttons = [];
+
+    function paint() {
+      var shown = hover || value;
+      buttons.forEach(function (btn, i) {
+        var n = i + 1;
+        if (type === 'stars') {
+          btn.style.color = n <= shown ? '#fbbf24' : '#d1d5db';
+        } else if (type === 'emoji') {
+          btn.style.opacity = shown === 0 || n === shown ? '1' : '.35';
+          btn.style.transform = n === shown ? 'scale(1.18)' : 'none';
+        } else {
+          btn.style.background = n === value ? accent : '#fff';
+          btn.style.color = n === value ? '#fff' : '#374151';
+          btn.style.borderColor = n === value ? accent : '#d1d5db';
+        }
+        btn.setAttribute('aria-checked', n === value ? 'true' : 'false');
+      });
+    }
+
+    for (var i = 1; i <= count; i++) {
+      (function (n) {
+        var label = type === 'stars' ? n + (n === 1 ? ' star' : ' stars') : type === 'emoji' ? EMOJI_RATINGS[n - 1][1] : n + ' out of 10';
+        var base = { border: '0', background: 'transparent', cursor: 'pointer', padding: '2px', 'line-height': '1', transition: 'transform .12s ease, opacity .12s ease' };
+        var style =
+          type === 'stars'
+            ? Object.assign(base, { 'font-size': '32px' })
+            : type === 'emoji'
+              ? Object.assign(base, { 'font-size': '30px' })
+              : { width: '32px', height: '34px', border: '1px solid #d1d5db', background: '#fff', 'border-radius': '8px', cursor: 'pointer', font: '600 14px system-ui, sans-serif' };
+        var btn = C.h('button', {
+          text: type === 'stars' ? '★' : type === 'emoji' ? EMOJI_RATINGS[n - 1][0] : String(n),
+          attrs: { type: 'button', role: 'radio', 'aria-label': label, 'aria-checked': 'false', title: label },
+          style: style,
+          on: {
+            click: function () {
+              value = n;
+              paint();
+              if (onChange) onChange(n);
+            },
+            mouseenter: function () {
+              if (type !== 'ten') {
+                hover = n;
+                paint();
+              }
+            },
+            mouseleave: function () {
+              hover = 0;
+              paint();
+            },
+          },
+        });
+        buttons.push(btn);
+        group.appendChild(btn);
+      })(i);
+    }
+    paint();
+    return {
+      el: group,
+      value: function () {
+        return value;
+      },
+    };
+  };
+
+  /* ---------------------------------------------------------------- dragging */
+
+  /**
+   * Lets the user drag `el` (a position:fixed element) around. While dragging it follows the
+   * pointer freely; on release, onDrop(rect) is called with its final bounding rectangle so the
+   * caller can snap it somewhere and remember the spot. A movement under a few pixels is a click,
+   * and the click the browser fires right after a real drag is swallowed. Returns a detach function.
+   */
+  C.makeDraggable = function (el, onDrop) {
+    var start = null;
+    var moved = false;
+    var suppress = false;
+    function onClickCapture(e) {
+      if (suppress) {
+        e.stopImmediatePropagation();
+        e.preventDefault();
+      }
+    }
+    function down(e) {
+      if (e.button !== 0) return;
+      var r = el.getBoundingClientRect();
+      start = { x: e.clientX, y: e.clientY, left: r.left, top: r.top };
+      moved = false;
+      try {
+        if (el.setPointerCapture) el.setPointerCapture(e.pointerId);
+      } catch (err) {
+        /* capture is optional */
+      }
+    }
+    function move(e) {
+      if (!start) return;
+      var dx = e.clientX - start.x;
+      var dy = e.clientY - start.y;
+      if (!moved && Math.sqrt(dx * dx + dy * dy) < 6) return;
+      moved = true;
+      el.style.transform = 'none';
+      el.style.right = 'auto';
+      el.style.bottom = 'auto';
+      el.style.left = start.left + dx + 'px';
+      el.style.top = start.top + dy + 'px';
+    }
+    function up() {
+      if (!start) return;
+      var was = moved;
+      start = null;
+      moved = false;
+      if (!was) return;
+      suppress = true;
+      setTimeout(function () {
+        suppress = false;
+      }, 0);
+      onDrop(el.getBoundingClientRect());
+    }
+    el.addEventListener('click', onClickCapture, true);
+    el.addEventListener('pointerdown', down);
+    el.addEventListener('pointermove', move);
+    el.addEventListener('pointerup', up);
+    el.addEventListener('pointercancel', up);
+    return function () {
+      el.removeEventListener('click', onClickCapture, true);
+      el.removeEventListener('pointerdown', down);
+      el.removeEventListener('pointermove', move);
+      el.removeEventListener('pointerup', up);
+      el.removeEventListener('pointercancel', up);
+    };
+  };
+
   /* ----------------------------------------------------- feature registry */
 
   /**

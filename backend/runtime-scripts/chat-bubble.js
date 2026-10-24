@@ -64,6 +64,7 @@
         stopped: false,
         sending: false,
         confirmEnd: false,
+        ratingDraft: null,
         unread: 0,
         messages: [],
         ticketId: null,
@@ -236,6 +237,7 @@
         state.since = 0;
         state.failures = 0;
         state.confirmEnd = false;
+        state.ratingDraft = null;
         persist();
         renderAll();
       }
@@ -321,6 +323,101 @@
             schedulePoll();
             renderAll();
           });
+      }
+
+      /* ---------------------------------------------- rating a finished chat */
+
+      function chatRatedKey() {
+        return 'mgc:' + C.companyId + ':chatrated:' + state.ticketId;
+      }
+      function chatRated() {
+        try {
+          return window.localStorage.getItem(chatRatedKey()) === '1';
+        } catch (e) {
+          return false;
+        }
+      }
+      function markChatRated() {
+        try {
+          window.localStorage.setItem(chatRatedKey(), '1');
+        } catch (e) {
+          /* the prompt may show again after a reload */
+        }
+      }
+
+      /** "How was this chat?" once a conversation has ended, when the feedback settings ask for it. */
+      function ratingBlock() {
+        var fb = C.config && C.config.feedback;
+        if (!state.ticketId || !fb || !fb.enabled || !fb.askAfterChat || !fb.rating) return null;
+        if (!state.messages.some(function (m) { return m.sender === 'visitor'; })) return null;
+        if (chatRated()) {
+          return C.h('div', { text: 'Thanks for rating this chat!', style: { 'font-size': '13px', color: '#16a34a', 'margin-bottom': '8px' } });
+        }
+        var draft = state.ratingDraft || (state.ratingDraft = { value: 0, comment: '' });
+        var error = C.h('div', { style: { color: '#b91c1c', 'font-size': '12px', 'min-height': '14px', margin: '4px 0' } });
+        var send = C.h('button', {
+          text: 'Send rating',
+          className: 'mgc-btn',
+          attrs: { type: 'button' },
+          style: { padding: '7px 14px', 'border-radius': '8px', border: '0', background: fb.rating.backgroundColor || cfg.visitorBubbleBg, color: fb.rating.textColor || '#fff', 'font-weight': '600', 'font-size': '13px' },
+          on: { click: submit },
+        });
+        function refresh() {
+          send.disabled = draft.value === 0;
+          send.style.opacity = send.disabled ? '.5' : '1';
+        }
+        var widget = C.ratingWidget(
+          fb.rating.ratingType,
+          function (n) {
+            draft.value = n;
+            refresh();
+          },
+          fb.rating.backgroundColor,
+          draft.value,
+        );
+        var comment = C.h('textarea', {
+          attrs: { rows: '2', maxlength: '2000', placeholder: 'Anything to add? (optional)' },
+          style: { width: '100%', 'box-sizing': 'border-box', resize: 'none', border: '1px solid #d1d5db', 'border-radius': '8px', padding: '7px 9px', font: '13px/1.4 system-ui, sans-serif', outline: 'none', 'margin-top': '8px' },
+          on: { input: function () { draft.comment = comment.value; } },
+        });
+        comment.value = draft.comment;
+        function submit() {
+          if (send.disabled) return;
+          send.disabled = true;
+          fetch(
+            C.apiBase + '/api/v1/runtime/feedback?company_id=' + encodeURIComponent(C.companyId) + '&locationId=' + encodeURIComponent(locationId),
+            {
+              method: 'POST',
+              headers: { 'content-type': 'application/json', 'x-chat-key': state.key || '' },
+              credentials: 'omit',
+              body: JSON.stringify({ kind: 'chat', ticketId: state.ticketId, rating: draft.value, comment: draft.comment.trim() }),
+            },
+          )
+            .then(function (res) {
+              // 409 means it was already rated (another tab): treat that as done too.
+              if (res.ok || res.status === 409) {
+                markChatRated();
+                state.ratingDraft = null;
+                renderAll();
+                return;
+              }
+              return res.json().then(function (data) {
+                throw new Error((data && data.error) || DEFAULT_ERROR);
+              });
+            })
+            .catch(function (err) {
+              error.textContent = (err && err.message) || DEFAULT_ERROR;
+              refresh();
+            });
+        }
+        refresh();
+        return C.h('div', { style: { 'text-align': 'left', background: '#f9fafb', border: '1px solid #e5e7eb', 'border-radius': '12px', padding: '12px', 'margin-bottom': '10px', width: '100%', 'box-sizing': 'border-box' } }, [
+          C.h('div', { text: 'How was this chat?', style: { 'font-weight': '600', 'text-align': 'center', 'margin-bottom': '6px', color: '#111827' } }),
+          widget.el,
+          comment,
+          error,
+          C.h('div', { style: { 'text-align': 'center' } }, [send]),
+        ]);
       }
 
       /* ------------------------------------------------------ rendering */
@@ -433,6 +530,7 @@
             el.appendChild(
               C.h('div', { style: { 'align-self': 'center', 'text-align': 'center', margin: '8px 0' } }, [
                 C.h('div', { text: state.closedBy === 'agent' ? 'This chat was closed by our team.' : 'This chat has ended.', style: { 'font-size': '12px', color: '#6b7280', 'margin-bottom': '8px' } }),
+                ratingBlock(),
                 chip('Start a new chat', resetChat, true),
               ]),
             );
