@@ -492,6 +492,8 @@ const resolveLoader: Resolver = async (companyId, groupId) => {
     enabled: true,
     loaderType: cfg.loaderType,
     customImageUrl: cfg.customImageUrl ?? '',
+    color: cfg.color || '#4f46e5',
+    size: cfg.size || 'medium',
   };
 };
 

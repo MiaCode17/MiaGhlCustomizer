@@ -402,6 +402,9 @@ let loader: LoaderConfig = {
   enabled: true,
   loaderType: 'dots',
   customImageUrl: undefined,
+  color: '#4f46e5',
+  size: 'medium',
+  library: [],
 };
 
 let bookACall: BookACallConfig = {
