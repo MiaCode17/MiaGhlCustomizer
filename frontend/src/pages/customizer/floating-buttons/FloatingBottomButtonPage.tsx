@@ -3,8 +3,8 @@ import { FloatingButtonsByPosition } from './FloatingButtonsByPosition';
 export function FloatingBottomButtonPage() {
   return (
     <FloatingButtonsByPosition
-      position="bottom"
-      description="Add floating quick-action buttons anchored to the bottom of the screen."
+      positions={['bottom', 'top']}
+      description="Add floating buttons along the bottom or top of the screen. They can open a drawer with tabs, a pop-up or a page, be dragged by viewers, and run for a limited time."
     />
   );
 }

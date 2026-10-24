@@ -182,6 +182,8 @@ const resolveFloatingButtons: Resolver = async (companyId, groupId) => {
   if (buttons.length === 0) return DISABLED;
   return {
     enabled: true,
+    // The browser's clock may be off; the script uses this to time start/end windows correctly.
+    serverTime: Date.now(),
     items: buttons.map((b) => ({
       id: String(b._id),
       position: b.position,
@@ -193,6 +195,20 @@ const resolveFloatingButtons: Resolver = async (companyId, groupId) => {
       shadow: b.shadow,
       animation: b.animation,
       subItems: b.subItems.map((s) => ({ label: s.label, url: s.url })),
+      variant: b.variant,
+      size: b.size,
+      layout: b.layout,
+      positionPercent: b.positionPercent,
+      edgeOffset: b.edgeOffset,
+      url: b.url,
+      openMode: b.openMode,
+      drawerDirection: b.drawerDirection,
+      drawerPercent: b.drawerPercent,
+      navTabs: b.navTabs.map((t) => ({ label: t.label, url: t.url })),
+      draggable: b.draggable,
+      startAt: b.startAt ? b.startAt.getTime() : null,
+      endAt: b.endAt ? b.endAt.getTime() : null,
+      showCountdown: b.showCountdown,
     })),
   };
 };

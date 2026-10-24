@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Button, Card, Checkbox, Form, Input, InputNumber, Modal, Space, Table, Tag, Typography, message } from 'antd';
 import { DeleteOutlined, EditOutlined, PlusOutlined, ProfileOutlined } from '@ant-design/icons';
+import { IconPicker } from '../../../components/IconPicker';
 import { PageIntro } from '../../../components/PageIntro';
 import { buttonBuilderService } from '../../../services/buttonBuilderService';
 import { ButtonPermissions, emptyButtonInput, InjectedButton, InjectedButtonInput } from '../../../types/button';
@@ -189,12 +190,8 @@ export function OpportunityTabsPage() {
             />
           </Form.Item>
           <Space size="large" wrap align="start">
-            <Form.Item label="Icon (emoji or image URL)">
-              <Input
-                style={{ width: 200 }}
-                value={form.icon}
-                onChange={(e) => setForm({ ...form, icon: e.target.value })}
-              />
+            <Form.Item label="Icon">
+              <IconPicker width={220} value={form.icon} onChange={(icon) => setForm({ ...form, icon })} />
             </Form.Item>
             <Form.Item label="Accent color">
               <input

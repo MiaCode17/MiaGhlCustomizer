@@ -6,7 +6,7 @@ import { SpecialTheme } from '../types/specialTheme';
 import { LogoCampaign, LogoCampaignInput } from '../types/logo';
 import { LoginPageConfig } from '../types/loginPage';
 import { ButtonSurface, InjectedButton, InjectedButtonInput, buttonBehaviorDefaults } from '../types/button';
-import { FloatingButton, FloatingButtonInput } from '../types/floatingButton';
+import { FloatingButton, FloatingButtonInput, floatingButtonDefaults } from '../types/floatingButton';
 import { DynamicLink, DynamicLinkInput } from '../types/dynamicLink';
 import { allRoles, MenuEdit } from '../types/menuEdit';
 import { CustomFieldCampaign, CustomFieldCampaignInput } from '../types/customField';
@@ -228,6 +228,7 @@ const floatingButtons: FloatingButton[] = [
     _id: 'fb-1',
     companyId: MOCK_COMPANY_ID,
     groupId: MOCK_GROUP_ID,
+    ...floatingButtonDefaults(),
     position: 'right',
     label: 'Quick Help',
     backgroundColor: '#6366F1',
@@ -246,6 +247,7 @@ const floatingButtons: FloatingButton[] = [
     _id: 'fb-2',
     companyId: MOCK_COMPANY_ID,
     groupId: MOCK_GROUP_ID,
+    ...floatingButtonDefaults(),
     position: 'bottom',
     label: 'Feedback',
     backgroundColor: '#22C55E',

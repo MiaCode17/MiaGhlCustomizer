@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { env } from '../config/env';
 import { GHL_SELECTORS } from './ghlSelectors';
+import { ICON_LIBRARY } from './icons';
 import { RUNTIME_FEATURES } from './resolve';
 
 /**
@@ -41,6 +42,7 @@ export function buildEmbedScript(options: {
     companyId: options.companyId,
     apiBase: options.apiBase.replace(/\/+$/, ''),
     selectors: GHL_SELECTORS,
+    icons: ICON_LIBRARY,
   });
   const core = readScript('core').replace(BOOT_PLACEHOLDER, () => `var BOOT = ${boot};`);
   if (core.includes('__MGC_BOOT__')) {

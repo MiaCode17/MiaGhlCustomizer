@@ -16,6 +16,7 @@ import {
   message,
 } from 'antd';
 import { DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons';
+import { IconGlyph, IconPicker } from '../../../components/IconPicker';
 import { buttonBuilderService } from '../../../services/buttonBuilderService';
 import {
   ButtonAnimation,
@@ -157,7 +158,7 @@ function ButtonPreview({ form }: { form: InjectedButtonInput }) {
       }}
     >
       <span style={style} title={form.tooltip || undefined}>
-        {form.icon ? <span style={{ fontSize: PREVIEW_ICON_SIZES[form.iconSize] }}>{form.icon}</span> : null}
+        {form.icon ? <IconGlyph value={form.icon} size={PREVIEW_ICON_SIZES[form.iconSize]} /> : null}
         {showLabel ? <span>{label || 'Button'}</span> : null}
       </span>
       <div style={{ fontSize: 11, color: '#6b7280', marginTop: 8 }}>Live preview (approximate)</div>
@@ -272,12 +273,8 @@ export function ButtonSurfaceTable({ surface, groupId }: ButtonSurfaceTableProps
       <Form.Item label="Tooltip">
         <Input value={form.tooltip} onChange={(e) => setForm({ ...form, tooltip: e.target.value })} />
       </Form.Item>
-      <Form.Item label="Icon" extra="An emoji or an image URL.">
-        <Input
-          value={form.icon}
-          onChange={(e) => setForm({ ...form, icon: e.target.value })}
-          placeholder="e.g. ⭐ or https://…/icon.png"
-        />
+      <Form.Item label="Icon" extra="Pick a built-in icon, or type an emoji or an image URL.">
+        <IconPicker value={form.icon} onChange={(icon) => setForm({ ...form, icon })} />
       </Form.Item>
       <Form.Item label="Order" extra="Lower numbers appear first.">
         <InputNumber

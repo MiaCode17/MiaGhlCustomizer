@@ -34,6 +34,7 @@
     companyId: BOOT.companyId,
     apiBase: BOOT.apiBase,
     sel: BOOT.selectors,
+    icons: BOOT.icons || {},
     features: {},
     active: {},
     config: null,
@@ -166,11 +167,41 @@
     return /^(https?:\/\/|\/|data:image\/)/i.test(String(value || '').trim());
   };
 
-  /** Renders an icon value: an image URL becomes <img>, anything else (emoji/text) a <span>. */
+  /** An inline SVG for one of the built-in icon names (see runtime/icons.ts), or null. */
+  C.svgIcon = function (name, size) {
+    var paths = Object.prototype.hasOwnProperty.call(C.icons, name) ? C.icons[name] : null;
+    if (!paths) return null;
+    var NS = 'http://www.w3.org/2000/svg';
+    var svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('width', String(size));
+    svg.setAttribute('height', String(size));
+    svg.setAttribute('fill', 'none');
+    svg.setAttribute('stroke', 'currentColor');
+    svg.setAttribute('stroke-width', '2');
+    svg.setAttribute('stroke-linecap', 'round');
+    svg.setAttribute('stroke-linejoin', 'round');
+    svg.setAttribute('aria-hidden', 'true');
+    svg.style.display = 'inline-block';
+    svg.style.flexShrink = '0';
+    paths.forEach(function (d) {
+      var path = document.createElementNS(NS, 'path');
+      path.setAttribute('d', d);
+      svg.appendChild(path);
+    });
+    return svg;
+  };
+
+  /**
+   * Renders an icon value: a built-in icon name (e.g. "chat") becomes an inline SVG that takes
+   * the surrounding text color, an image URL becomes <img>, anything else (emoji/text) a <span>.
+   */
   C.icon = function (value, size) {
     var v = String(value || '').trim();
     if (!v) return null;
     size = size || 16;
+    var named = C.svgIcon(v, size);
+    if (named) return named;
     if (C.isImageUrl(v)) {
       return C.h('img', {
         attrs: { src: C.safeUrl(v), alt: '' },
@@ -798,12 +829,18 @@
 
   /**
    * Side panel iframe that slides in from an edge. opts: { direction: right|left|top|bottom
-   * (default right), percent: 20–100 of the viewport along that axis (default 50) }.
+   * (default right), percent: 20–100 of the viewport along that axis (default 50),
+   * tabs: [{ label, url }] adds a tab bar that switches the page shown (the first tab is
+   * shown when no url is given), activeIndex: which tab starts selected }.
    */
   C.drawer = function (url, title, opts) {
-    var safe = C.safeUrl(url);
-    if (!safe) return;
     opts = opts || {};
+    var tabs = (opts.tabs || []).filter(function (t) {
+      return t && t.label && t.url;
+    });
+    var activeTab = Math.min(Math.max(0, parseInt(opts.activeIndex, 10) || 0), Math.max(0, tabs.length - 1));
+    var safe = C.safeUrl(url || (tabs[activeTab] && tabs[activeTab].url) || '');
+    if (!safe) return;
     var dir = ['left', 'top', 'bottom'].indexOf(opts.direction) >= 0 ? opts.direction : 'right';
     var percent = Math.min(100, Math.max(20, parseInt(opts.percent, 10) || 50));
     var horizontal = dir === 'left' || dir === 'right';
@@ -835,6 +872,54 @@
       panelStyle.left = '0';
       panelStyle.right = '0';
       panelStyle.height = percent + 'vh';
+    }
+
+    var frame = C.h('iframe', {
+      attrs: { src: safe, title: title || 'Customizer', allow: 'clipboard-write; fullscreen' },
+      style: { border: '0', width: '100%', flex: '1', background: '#fff' },
+    });
+
+    var tabBar = null;
+    if (tabs.length > 1) {
+      var tabButtons = tabs.map(function (tab, index) {
+        var btn = C.h('button', {
+          text: tab.label,
+          attrs: { type: 'button', role: 'tab', 'aria-selected': index === activeTab ? 'true' : 'false' },
+          style: {
+            border: '0',
+            background: 'transparent',
+            padding: '8px 12px',
+            cursor: 'pointer',
+            font: '600 13px/1.2 system-ui, sans-serif',
+            color: index === activeTab ? '#4f46e5' : '#6b7280',
+            'border-bottom': '2px solid ' + (index === activeTab ? '#4f46e5' : 'transparent'),
+          },
+          on: {
+            click: function () {
+              tabButtons.forEach(function (other, i) {
+                var on = i === index;
+                other.setAttribute('aria-selected', on ? 'true' : 'false');
+                other.style.color = on ? '#4f46e5' : '#6b7280';
+                other.style.borderBottom = '2px solid ' + (on ? '#4f46e5' : 'transparent');
+              });
+              // The URL may hold placeholders, so it is resolved when the tab is opened.
+              C.resolveUrl(tab.url).then(function (resolved) {
+                var next = C.safeUrl(resolved);
+                if (next) frame.setAttribute('src', next);
+              });
+            },
+          },
+        });
+        return btn;
+      });
+      tabBar = C.h(
+        'div',
+        {
+          attrs: { role: 'tablist' },
+          style: { display: 'flex', 'flex-wrap': 'wrap', gap: '2px', padding: '0 8px', 'border-bottom': '1px solid #e5e7eb', background: '#fafafa' },
+        },
+        tabButtons,
+      );
     }
 
     var panel = C.h(
@@ -872,10 +957,8 @@
             }),
           ],
         ),
-        C.h('iframe', {
-          attrs: { src: safe, title: title || 'Customizer', allow: 'clipboard-write; fullscreen' },
-          style: { border: '0', width: '100%', flex: '1', background: '#fff' },
-        }),
+        tabBar,
+        frame,
       ],
     );
     document.body.appendChild(
