@@ -16,7 +16,7 @@ const FEATURE_LABELS: Record<string, string> = {
   'dynamic-links': 'Custom menu links',
   menu: 'Menu edits',
   banners: 'Banners',
-  'chat-bubble': 'Chat bubble',
+  'chat-bubble': 'Chat bubble & live chat',
   loader: 'Loader',
   'conversation-style': 'Conversation style',
   misc: 'Help tooltip & add-on banner',

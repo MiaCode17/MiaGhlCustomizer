@@ -11,7 +11,8 @@ import { DynamicLink, DynamicLinkInput } from '../types/dynamicLink';
 import { allRoles, MenuEdit } from '../types/menuEdit';
 import { CustomFieldCampaign, CustomFieldCampaignInput } from '../types/customField';
 import { Banner, BannerInput } from '../types/banner';
-import { ChatBubbleConfig } from '../types/chatBubble';
+import { ChatBubbleConfig, emptyChatBubbleConfig } from '../types/chatBubble';
+import { SupportMessage, SupportTicket } from '../types/supportChat';
 import { LoaderConfig } from '../types/loader';
 import { LaunchpadTile, LaunchpadTileInput } from '../types/launchpad';
 import { LocationLink } from '../types/locationLink';
@@ -377,6 +378,7 @@ const banners: Banner[] = [
 ];
 
 let chatBubble: ChatBubbleConfig = {
+  ...emptyChatBubbleConfig,
   enabled: true,
   title: 'Chat with us',
   subtitle: 'We typically reply within a few minutes',
@@ -437,6 +439,29 @@ let locationLinks: LocationLink[] = [
     openMode: 'modal',
     createdAt: '2026-09-10T10:00:00.000Z',
     updatedAt: '2026-09-10T10:00:00.000Z',
+  },
+];
+
+const supportMessages: Record<string, SupportMessage[]> = {
+  'tk-1': [
+    { id: 'sm-1', sender: 'visitor', text: 'Hi, can you help me connect my domain?', authorName: 'Ann Lee', at: Date.now() - 3600_000 },
+    { id: 'sm-2', sender: 'agent', text: 'Of course! Which provider is it with?', authorName: 'Support', at: Date.now() - 3500_000 },
+    { id: 'sm-3', sender: 'visitor', text: 'GoDaddy. I have the DNS page open.', authorName: 'Ann Lee', at: Date.now() - 600_000 },
+  ],
+  'tk-2': [{ id: 'sm-4', sender: 'visitor', text: 'Billing question about my last invoice', authorName: 'Bob Stone', at: Date.now() - 86400_000 }],
+};
+let supportTickets: SupportTicket[] = [
+  {
+    id: 'tk-1', locationId: 'loc-1001', status: 'open', visitorName: 'Ann Lee', visitorEmail: 'ann@example.com',
+    subject: 'Hi, can you help me connect my domain?', lastMessageAt: new Date(Date.now() - 600_000).toISOString(),
+    lastMessageFrom: 'visitor', lastMessagePreview: 'GoDaddy. I have the DNS page open.', messageCount: 3, unreadForAgent: 1,
+    closedAt: null, closedBy: null, createdAt: new Date(Date.now() - 3600_000).toISOString(),
+  },
+  {
+    id: 'tk-2', locationId: 'loc-1002', status: 'closed', visitorName: 'Bob Stone', visitorEmail: 'bob@example.com',
+    subject: 'Billing question about my last invoice', lastMessageAt: new Date(Date.now() - 86400_000).toISOString(),
+    lastMessageFrom: 'system', lastMessagePreview: 'The chat was closed by our team.', messageCount: 2, unreadForAgent: 0,
+    closedAt: new Date(Date.now() - 86000_000).toISOString(), closedBy: 'agent', createdAt: new Date(Date.now() - 90000_000).toISOString(),
   },
 ];
 
@@ -712,6 +737,48 @@ export const mockAdapter = async (
     const id = path.slice('/location-links/'.length);
     locationLinks = locationLinks.filter((l) => l._id !== id);
     return respond(config, null, 204);
+  }
+
+  if (method === 'get' && path === '/support-chat/unread') {
+    return respond(config, { count: supportTickets.filter((t) => t.status === 'open' && t.unreadForAgent > 0).length });
+  }
+  if (method === 'get' && path === '/support-chat/tickets') {
+    const status = query.status ?? 'open';
+    const search = (query.search ?? '').toLowerCase();
+    const list = supportTickets.filter(
+      (t) =>
+        (status === 'all' || t.status === status) &&
+        (!search || [t.visitorName, t.visitorEmail, t.subject, t.locationId].some((v) => v.toLowerCase().includes(search))),
+    );
+    return respond(config, { tickets: list, total: list.length, page: 1, limit: 50 });
+  }
+  const chatMatch = path.match(/^\/support-chat\/tickets\/([^/]+)(?:\/(messages|typing|close|reopen))?$/);
+  if (chatMatch) {
+    const [, id, action] = chatMatch;
+    const found = supportTickets.find((t) => t.id === id);
+    if (!found) return Promise.reject({ response: { status: 404, data: { error: 'Chat not found' } } });
+    if (method === 'get' && !action) {
+      supportTickets = supportTickets.map((t) => (t.id === id ? { ...t, unreadForAgent: 0 } : t));
+      return respond(config, { ticket: supportTickets.find((t) => t.id === id), messages: supportMessages[id] ?? [] });
+    }
+    if (method === 'post' && action === 'messages') {
+      const text = String((body as { text?: string }).text ?? '');
+      const sent: SupportMessage = { id: nextId('sm'), sender: 'agent', text, authorName: String((body as { authorName?: string }).authorName ?? 'Support'), at: Date.now() };
+      supportMessages[id] = [...(supportMessages[id] ?? []), sent];
+      supportTickets = supportTickets.map((t) => (t.id === id ? { ...t, lastMessageAt: new Date().toISOString(), lastMessageFrom: 'agent', lastMessagePreview: text, messageCount: t.messageCount + 1 } : t));
+      return respond(config, { message: sent }, 201);
+    }
+    if (method === 'post' && action === 'typing') return respond(config, null, 204);
+    if (method === 'post' && (action === 'close' || action === 'reopen')) {
+      const closing = action === 'close';
+      supportTickets = supportTickets.map((t) => (t.id === id ? { ...t, status: closing ? 'closed' : 'open', closedAt: closing ? new Date().toISOString() : null, closedBy: closing ? 'agent' : null } : t));
+      return respond(config, null, 204);
+    }
+    if (method === 'delete' && !action) {
+      supportTickets = supportTickets.filter((t) => t.id !== id);
+      delete supportMessages[id];
+      return respond(config, null, 204);
+    }
   }
 
   if (method === 'get' && path === '/launchpad') {

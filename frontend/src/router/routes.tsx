@@ -108,6 +108,9 @@ const ChatBubblePage = lazy(() =>
     default: m.ChatBubblePage,
   })),
 );
+const ChatInboxPage = lazy(() =>
+  import('../pages/customizer/chat-bubble/ChatInboxPage').then((m) => ({ default: m.ChatInboxPage })),
+);
 const LoaderPage = lazy(() =>
   import('../pages/customizer/loader/LoaderPage').then((m) => ({ default: m.LoaderPage })),
 );
@@ -179,6 +182,7 @@ export const routes: RouteObject[] = [
       { path: '/miaghlcustomizer/menu/settings-nav', element: lazyPage(<SettingsNavPage />) },
       { path: '/miaghlcustomizer/custom-fields', element: lazyPage(<CustomFieldsPage />) },
       { path: '/miaghlcustomizer/engagement/chat-manager', element: lazyPage(<ChatBubblePage />) },
+      { path: '/miaghlcustomizer/engagement/inbox', element: lazyPage(<ChatInboxPage />) },
       { path: '/miaghlcustomizer/engagement/loader', element: lazyPage(<LoaderPage />) },
       { path: '/miaghlcustomizer/engagement/banners', element: lazyPage(<BannersPage />) },
       {
