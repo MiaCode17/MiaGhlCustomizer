@@ -25,6 +25,7 @@ const FEATURE_LABELS: Record<string, string> = {
   'custom-fields': 'Custom field locks',
   'opportunity-tabs': 'Opportunity tabs',
   launchpad: 'Launchpad tiles',
+  'user-links': 'Sub-account links',
 };
 
 async function copy(text: string) {

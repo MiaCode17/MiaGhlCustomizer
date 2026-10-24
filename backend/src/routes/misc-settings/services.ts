@@ -7,6 +7,7 @@ export interface MiscSettingsInput {
   addonBanner: MiscSettingsDoc['addonBanner'];
   membership: MiscSettingsDoc['membership'];
   unreadBadge: MiscSettingsDoc['unreadBadge'];
+  userLinks: MiscSettingsDoc['userLinks'];
 }
 
 export async function getMiscSettings(companyId: Types.ObjectId, groupId?: string) {

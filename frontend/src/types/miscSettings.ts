@@ -35,11 +35,18 @@ export interface UnreadBadgeSettings {
   badgeColor: string;
 }
 
+export interface UserLinksSettings {
+  enabled: boolean;
+  /** How many links one location may keep. */
+  maxLinks: number;
+}
+
 export interface MiscSettings {
   tooltip: TooltipSettings;
   addonBanner: AddonBannerSettings;
   membership: MembershipSettings;
   unreadBadge: UnreadBadgeSettings;
+  userLinks: UserLinksSettings;
 }
 
 export const emptyMiscSettings: MiscSettings = {
@@ -62,4 +69,5 @@ export const emptyMiscSettings: MiscSettings = {
     textColor: '#ffffff',
   },
   unreadBadge: { enabled: true, badgeColor: '#2563eb' },
+  userLinks: { enabled: false, maxLinks: 10 },
 };

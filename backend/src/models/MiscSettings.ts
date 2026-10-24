@@ -37,6 +37,12 @@ export interface UnreadBadgeSettings {
   badgeColor: string;
 }
 
+export interface UserLinksSettings {
+  enabled: boolean;
+  /** How many links one location may keep. */
+  maxLinks: number;
+}
+
 export interface MiscSettingsDoc {
   _id: Types.ObjectId;
   companyId: Types.ObjectId;
@@ -45,6 +51,7 @@ export interface MiscSettingsDoc {
   addonBanner: AddonBannerSettings;
   membership: MembershipSettings;
   unreadBadge: UnreadBadgeSettings;
+  userLinks: UserLinksSettings;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -95,6 +102,14 @@ const unreadBadgeSchema = new Schema<UnreadBadgeSettings>(
   { _id: false },
 );
 
+const userLinksSchema = new Schema<UserLinksSettings>(
+  {
+    enabled: { type: Boolean, default: false },
+    maxLinks: { type: Number, default: 10, min: 1, max: 30 },
+  },
+  { _id: false },
+);
+
 const miscSettingsSchema = new Schema<MiscSettingsDoc>(
   {
     companyId: { type: Schema.Types.ObjectId, ref: 'Company', required: true, index: true },
@@ -103,6 +118,7 @@ const miscSettingsSchema = new Schema<MiscSettingsDoc>(
     addonBanner: { type: addonBannerSchema, default: () => ({}) },
     membership: { type: membershipSchema, default: () => ({}) },
     unreadBadge: { type: unreadBadgeSchema, default: () => ({}) },
+    userLinks: { type: userLinksSchema, default: () => ({}) },
   },
   { timestamps: true },
 );

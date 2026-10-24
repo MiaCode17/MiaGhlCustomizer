@@ -1,13 +1,16 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
   Button,
   Card,
   Form,
   Input,
+  InputNumber,
+  Popconfirm,
   Select,
   Space,
   Switch,
+  Table,
   Tag,
   Typography,
   message,
@@ -16,7 +19,9 @@ import { Link } from 'react-router-dom';
 import { SettingOutlined } from '@ant-design/icons';
 import { useCompany } from '../../../context/CompanyContext';
 import { PageIntro } from '../../../components/PageIntro';
+import { locationLinksService } from '../../../services/locationLinksService';
 import { miscSettingsService } from '../../../services/miscSettingsService';
+import { LocationLink } from '../../../types/locationLink';
 import { emptyMiscSettings, MiscSettings } from '../../../types/miscSettings';
 
 const TOOLTIP_PLACEMENT_OPTIONS = [
@@ -45,6 +50,31 @@ export function MiscSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [locationIdDraft, setLocationIdDraft] = useState('');
+  const [locationLinks, setLocationLinks] = useState<LocationLink[]>([]);
+  const [linksLoading, setLinksLoading] = useState(false);
+
+  const loadLocationLinks = useCallback(() => {
+    setLinksLoading(true);
+    locationLinksService
+      .list()
+      .then(setLocationLinks)
+      .catch(() => message.error('Failed to load location links'))
+      .finally(() => setLinksLoading(false));
+  }, []);
+
+  useEffect(() => {
+    loadLocationLinks();
+  }, [loadLocationLinks]);
+
+  const removeLocationLink = async (id: string) => {
+    try {
+      await locationLinksService.remove(id);
+      message.success('Link removed');
+      loadLocationLinks();
+    } catch (err) {
+      message.error(err instanceof Error ? err.message : 'Failed to remove link');
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -52,7 +82,7 @@ export function MiscSettingsPage() {
     miscSettingsService
       .get(groupId)
       .then((loaded) => {
-        if (!cancelled) setSettings(loaded ?? emptyMiscSettings);
+        if (!cancelled) setSettings(loaded ? { ...emptyMiscSettings, ...loaded } : emptyMiscSettings);
       })
       .catch(() => {
         if (!cancelled) message.error('Failed to load settings');
@@ -374,6 +404,70 @@ export function MiscSettingsPage() {
               />
             </Form.Item>
           </Form>
+        </Card>
+
+        <Card title="Sub-account links" loading={loading}>
+          <Space align="center" style={{ marginBottom: 8 }}>
+            <Switch
+              checked={settings.userLinks.enabled}
+              onChange={(enabled) =>
+                setSettings({ ...settings, userLinks: { ...settings.userLinks, enabled } })
+              }
+            />
+            <Typography.Text>Let sub-account admins add their own sidebar links</Typography.Text>
+          </Space>
+          <Typography.Paragraph type="secondary">
+            Admins of a sub-account get a <b>My links</b> entry in their sidebar where they can add, edit and
+            delete links that show for everyone in that sub-account. Their GHL session is checked against
+            GHL on every change. Save the settings above to apply this switch.
+          </Typography.Paragraph>
+          <Form layout="vertical">
+            <Form.Item label="Maximum links per sub-account">
+              <InputNumber
+                min={1}
+                max={30}
+                value={settings.userLinks.maxLinks}
+                onChange={(maxLinks) =>
+                  setSettings({ ...settings, userLinks: { ...settings.userLinks, maxLinks: maxLinks ?? 10 } })
+                }
+              />
+            </Form.Item>
+          </Form>
+          <Typography.Text strong>Links created so far</Typography.Text>
+          <Table<LocationLink>
+            style={{ marginTop: 8 }}
+            size="small"
+            rowKey="_id"
+            loading={linksLoading}
+            dataSource={locationLinks}
+            pagination={{ pageSize: 8, hideOnSinglePage: true }}
+            locale={{ emptyText: 'No sub-account has added a link yet.' }}
+            columns={[
+              { title: 'Location', dataIndex: 'locationId', width: 160 },
+              {
+                title: 'Link',
+                key: 'link',
+                render: (_, row) => (
+                  <span>
+                    {row.icon} {row.title}
+                  </span>
+                ),
+              },
+              { title: 'URL', dataIndex: 'url', ellipsis: true },
+              {
+                title: '',
+                key: 'remove',
+                width: 90,
+                render: (_, row) => (
+                  <Popconfirm title="Remove this link?" onConfirm={() => removeLocationLink(row._id)}>
+                    <Button size="small" danger type="text">
+                      Remove
+                    </Button>
+                  </Popconfirm>
+                ),
+              },
+            ]}
+          />
         </Card>
 
         <div className="flex justify-end">

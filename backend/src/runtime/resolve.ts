@@ -216,6 +216,14 @@ const resolveLaunchpad: Resolver = async (companyId, groupId) => {
   };
 };
 
+const resolveUserLinks: Resolver = async (companyId, groupId, ctx) => {
+  const misc = await findScoped(MiscSettings, companyId, groupId);
+  // Only meaningful inside a sub-account; the script fetches the links themselves separately
+  // so that adding or removing one shows up immediately rather than after the config cache.
+  if (!misc?.userLinks?.enabled || !ctx.locationId) return DISABLED;
+  return { enabled: true, maxLinks: misc.userLinks.maxLinks };
+};
+
 const resolveBookACall: Resolver = async (companyId, groupId) => {
   const cfg = await findScoped(BookACall, companyId, groupId);
   if (!cfg?.enabled || !cfg.bookingUrl) return DISABLED;
@@ -433,6 +441,7 @@ export const RUNTIME_FEATURES = {
   'opportunity-tabs': resolveOpportunityTabs,
   'floating-buttons': resolveFloatingButtons,
   launchpad: resolveLaunchpad,
+  'user-links': resolveUserLinks,
   'book-a-call': resolveBookACall,
   'dynamic-links': resolveDynamicLinks,
   menu: resolveMenu,

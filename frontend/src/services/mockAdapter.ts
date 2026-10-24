@@ -14,6 +14,7 @@ import { Banner, BannerInput } from '../types/banner';
 import { ChatBubbleConfig } from '../types/chatBubble';
 import { LoaderConfig } from '../types/loader';
 import { LaunchpadTile, LaunchpadTileInput } from '../types/launchpad';
+import { LocationLink } from '../types/locationLink';
 import { MiscSettings } from '../types/miscSettings';
 import { BookACallConfig } from '../types/bookACall';
 import { ConversationStyleConfig, emptyConversationStyle } from '../types/conversationStyle';
@@ -423,6 +424,20 @@ let launchpadTiles: LaunchpadTile[] = [
   },
 ];
 
+let locationLinks: LocationLink[] = [
+  {
+    _id: 'll-1',
+    companyId: MOCK_COMPANY_ID,
+    locationId: 'loc-1001',
+    title: 'Client billing portal',
+    url: 'https://billing.example.com',
+    icon: '💳',
+    openMode: 'modal',
+    createdAt: '2026-09-10T10:00:00.000Z',
+    updatedAt: '2026-09-10T10:00:00.000Z',
+  },
+];
+
 let miscSettings: MiscSettings = {
   tooltip: { enabled: true, buttonText: 'Need help?', placement: 'bottom-right' },
   addonBanner: {
@@ -443,6 +458,7 @@ let miscSettings: MiscSettings = {
     textColor: '#ffffff',
   },
   unreadBadge: { enabled: true, badgeColor: '#2563eb' },
+  userLinks: { enabled: true, maxLinks: 10 },
 };
 
 let groups: Group[] = [
@@ -686,6 +702,16 @@ export const mockAdapter = async (
     return respond(config, { menuEdit });
   }
 
+  if (method === 'get' && path === '/location-links') {
+    const loc = query.locationId;
+    return respond(config, { links: loc ? locationLinks.filter((l) => l.locationId === loc) : locationLinks });
+  }
+  if (method === 'delete' && path.startsWith('/location-links/')) {
+    const id = path.slice('/location-links/'.length);
+    locationLinks = locationLinks.filter((l) => l._id !== id);
+    return respond(config, null, 204);
+  }
+
   if (method === 'get' && path === '/launchpad') {
     return respond(config, { tiles: launchpadTiles });
   }
@@ -858,6 +884,7 @@ export const mockAdapter = async (
         'custom-fields': { enabled: customFieldCampaigns.length > 0 },
         'opportunity-tabs': { enabled: buttons.some((b) => b.surface === 'opportunity-tab') },
         launchpad: { enabled: launchpadTiles.length > 0 },
+        'user-links': { enabled: miscSettings.userLinks.enabled && Boolean(query.locationId) },
       },
     });
   }

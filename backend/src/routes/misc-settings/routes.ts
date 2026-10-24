@@ -37,11 +37,17 @@ const unreadBadgeSchema = z.object({
   badgeColor: COLOR.default('#2563eb'),
 });
 
+const userLinksSchema = z.object({
+  enabled: z.boolean(),
+  maxLinks: z.number().int().min(1).max(30).default(10),
+});
+
 const miscSettingsInputSchema = z.object({
   tooltip: tooltipSchema,
   addonBanner: addonBannerSchema,
   membership: membershipSchema,
   unreadBadge: unreadBadgeSchema,
+  userLinks: userLinksSchema.default({ enabled: false, maxLinks: 10 }),
 });
 
 function getGroupId(req: { query: { groupId?: unknown } }): string | undefined {
