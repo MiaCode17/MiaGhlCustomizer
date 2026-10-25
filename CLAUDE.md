@@ -35,3 +35,6 @@ Use the `add-feature` skill. Short form: model -> router (+ mount) -> `runtime/r
 
 ## Done means
 Typecheck, lint and tests pass in each app you changed. Say so explicitly, and say what you could not verify.
+
+## Browser testing
+Playwright MCP is configured in `.mcp.json`. To check UI work: start the backend and frontend dev servers, then open http://localhost:5173 and click through the editor and its live preview. Report what you saw, not what you assume.
