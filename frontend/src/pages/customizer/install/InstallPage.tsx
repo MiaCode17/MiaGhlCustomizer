@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Alert, Button, Card, Input, Space, Table, Tag, Typography, message } from 'antd';
-import { CodeOutlined, CopyOutlined, SearchOutlined } from '@ant-design/icons';
+import { CodeOutlined, CopyOutlined, KeyOutlined, SearchOutlined } from '@ant-design/icons';
 import { useCompany } from '../../../context/CompanyContext';
 import { useGroups } from '../../../context/GroupsContext';
 import { embedScriptUrl, runtimeService } from '../../../services/runtimeService';
@@ -9,6 +9,7 @@ import { RuntimeConfig } from '../../../types/runtime';
 const FEATURE_LABELS: Record<string, string> = {
   theme: 'Theme',
   'special-theme': 'Occasional theme',
+  'premium-theme': 'Premium theme',
   logo: 'Logo',
   buttons: 'Page buttons',
   'floating-buttons': 'Side / bottom buttons',
@@ -16,10 +17,19 @@ const FEATURE_LABELS: Record<string, string> = {
   'dynamic-links': 'Custom menu links',
   menu: 'Menu edits',
   banners: 'Banners',
-  'chat-bubble': 'Chat bubble',
+  'hero-banners': 'Hero banners',
+  'chat-bubble': 'Chat bubble & live chat',
   loader: 'Loader',
   'conversation-style': 'Conversation style',
   misc: 'Help tooltip & add-on banner',
+  membership: 'Membership button',
+  'unread-badge': 'Unread conversations badge',
+  'custom-fields': 'Custom field locks',
+  'opportunity-tabs': 'Opportunity tabs',
+  launchpad: 'Launchpad tiles',
+  'user-links': 'Sub-account links',
+  guides: 'Guided tours',
+  feedback: 'Feedback & cancellation survey',
 };
 
 async function copy(text: string) {
@@ -32,10 +42,12 @@ async function copy(text: string) {
 }
 
 export function InstallPage() {
-  const { company, updateCompany } = useCompany();
+  const { company, updateCompany, setGhlApiToken } = useCompany();
   const { groups } = useGroups();
   const [ghlIdDraft, setGhlIdDraft] = useState<string | null>(null);
   const [savingGhlId, setSavingGhlId] = useState(false);
+  const [tokenDraft, setTokenDraft] = useState('');
+  const [savingToken, setSavingToken] = useState(false);
   const [locationId, setLocationId] = useState('');
   const [planId, setPlanId] = useState('');
   const [result, setResult] = useState<RuntimeConfig | null>(null);
@@ -58,6 +70,19 @@ export function InstallPage() {
       message.error(err instanceof Error ? err.message : 'Failed to save GHL company ID');
     } finally {
       setSavingGhlId(false);
+    }
+  };
+
+  const saveToken = async (token: string) => {
+    setSavingToken(true);
+    try {
+      await setGhlApiToken(token);
+      setTokenDraft('');
+      message.success(token ? 'GHL API token saved' : 'GHL API token removed');
+    } catch (err) {
+      message.error(err instanceof Error ? err.message : 'Failed to save the GHL API token');
+    } finally {
+      setSavingToken(false);
     }
   };
 
@@ -128,6 +153,53 @@ export function InstallPage() {
             browser console and reload. Run <code>__mgcCustomizer.reload()</code> to re-fetch
             settings without reloading.
           </Typography.Text>
+        </Card>
+
+        <Card
+          title={
+            <Space>
+              <KeyOutlined />
+              GHL API token
+            </Space>
+          }
+        >
+          <Typography.Paragraph>
+            Some features read data the browser can&apos;t see, such as the unread conversations
+            badge. For those, our server calls GHL with a{' '}
+            <b>Private Integration token</b> from your agency (GHL → Settings → Private
+            Integrations). Give it the <code>conversations.readonly</code> scope, plus{' '}
+            <code>locations.readonly</code> and <code>oauth.write</code> if it&apos;s an
+            agency-level token. It is stored encrypted and is never shown again after saving.
+          </Typography.Paragraph>
+          {company.hasGhlApiToken ? (
+            <Alert
+              type="success"
+              showIcon
+              style={{ marginBottom: 12 }}
+              message="A token is saved"
+              action={
+                <Button size="small" danger loading={savingToken} onClick={() => saveToken('')}>
+                  Remove
+                </Button>
+              }
+            />
+          ) : null}
+          <Space.Compact style={{ width: 520 }}>
+            <Input.Password
+              value={tokenDraft}
+              onChange={(e) => setTokenDraft(e.target.value)}
+              placeholder={company.hasGhlApiToken ? 'Paste a new token to replace it' : 'pit-…'}
+              autoComplete="off"
+            />
+            <Button
+              type="primary"
+              loading={savingToken}
+              disabled={!tokenDraft.trim()}
+              onClick={() => saveToken(tokenDraft.trim())}
+            >
+              Save token
+            </Button>
+          </Space.Compact>
         </Card>
 
         <Card title="Check what a location will see">

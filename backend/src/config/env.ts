@@ -17,6 +17,8 @@ const envSchema = z.object({
         .filter(Boolean),
     ),
   JWT_SECRET: z.string().min(16, 'JWT_SECRET must be at least 16 characters'),
+  // Key for encrypting stored credentials (e.g. GHL API tokens). Falls back to JWT_SECRET.
+  SECRETS_KEY: z.string().min(16).optional(),
   // Public origin of this API as seen from GHL (e.g. https://cdn.example.com). Baked into the
   // embed script. Falls back to the request's own host when unset.
   PUBLIC_BASE_URL: z.string().url().optional(),

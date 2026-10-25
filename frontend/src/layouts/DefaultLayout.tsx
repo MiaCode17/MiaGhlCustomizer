@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Layout, Menu, Typography, Space, Button, Avatar, Tooltip } from 'antd';
+import { Layout, Menu, Typography, Space, Button, Avatar, Tooltip, Badge } from 'antd';
 import type { MenuProps } from 'antd';
 import {
   BgColorsOutlined,
@@ -19,6 +19,7 @@ import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useCompany } from '../context/CompanyContext';
 import { useSession } from '../context/SessionContext';
 import { useBrandTheme } from '../context/BrandThemeContext';
+import { supportChatService } from '../services/supportChatService';
 
 const { Header, Sider, Content } = Layout;
 
@@ -39,6 +40,7 @@ const NAV_ITEMS: NavItem[] = [
     label: 'Custom Themes',
     children: [
       { key: '/miaghlcustomizer/theme/categories', label: 'Theme Categories' },
+      { key: '/miaghlcustomizer/theme/premium', label: 'Premium Themes' },
       { key: '/miaghlcustomizer/theme/occasional', label: 'Occasional Themes' },
       { key: '/miaghlcustomizer/theme/sidebar-styling', label: 'Sidebar Styling' },
       { key: '/miaghlcustomizer/theme/make-your-own', label: 'Make Your Own' },
@@ -55,6 +57,8 @@ const NAV_ITEMS: NavItem[] = [
       { key: '/miaghlcustomizer/buttons/side', label: 'Side' },
       { key: '/miaghlcustomizer/buttons/contact', label: 'Contact' },
       { key: '/miaghlcustomizer/buttons/opportunity', label: 'Opportunity' },
+      { key: '/miaghlcustomizer/buttons/opportunity-tabs', label: 'Opportunity Tabs' },
+      { key: '/miaghlcustomizer/buttons/launchpad', label: 'Launchpad' },
       { key: '/miaghlcustomizer/buttons/dashboard', label: 'Dashboard' },
       { key: '/miaghlcustomizer/buttons/bottom', label: 'Bottom' },
       { key: '/miaghlcustomizer/buttons/book-a-call', label: 'Book a Call' },
@@ -77,8 +81,13 @@ const NAV_ITEMS: NavItem[] = [
     label: 'Engagement Hub',
     children: [
       { key: '/miaghlcustomizer/engagement/chat-manager', label: 'Chat Manager' },
+      { key: '/miaghlcustomizer/engagement/inbox', label: 'Chat Inbox' },
+      { key: '/miaghlcustomizer/engagement/tours', label: 'Guided Tours' },
+      { key: '/miaghlcustomizer/engagement/feedback', label: 'Feedback' },
+      { key: '/miaghlcustomizer/engagement/feedback-responses', label: 'Feedback Responses' },
       { key: '/miaghlcustomizer/engagement/loader', label: 'Loader' },
       { key: '/miaghlcustomizer/engagement/banners', label: 'Banners' },
+      { key: '/miaghlcustomizer/engagement/hero-banners', label: 'Hero Banners' },
       { key: '/miaghlcustomizer/engagement/conversations', label: 'Conversation Customization' },
     ],
   },
@@ -126,13 +135,38 @@ export function DefaultLayout() {
     }
   }, [location.pathname]);
 
+  // Chats waiting for an answer, shown next to Chat Inbox (and its group while it is collapsed).
+  const [unreadChats, setUnreadChats] = useState(0);
+  useEffect(() => {
+    if (!user) return undefined;
+    const load = () => {
+      if (!document.hidden) supportChatService.unreadCount().then(setUnreadChats).catch(() => undefined);
+    };
+    load();
+    const id = setInterval(load, 30000);
+    return () => clearInterval(id);
+  }, [user]);
+
+  const withBadge = (label: string, count: number): React.ReactNode =>
+    count > 0 ? (
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+        {label}
+        <Badge count={count} size="small" />
+      </span>
+    ) : (
+      label
+    );
+
   const menuItems: MenuProps['items'] = NAV_ITEMS.map((item) =>
     item.children
       ? {
           key: item.key,
           icon: item.icon,
-          label: item.label,
-          children: item.children.map((child) => ({ key: child.key, label: child.label })),
+          label: item.key === 'engagement-hub' ? withBadge(item.label, unreadChats) : item.label,
+          children: item.children.map((child) => ({
+            key: child.key,
+            label: child.key === '/miaghlcustomizer/engagement/inbox' ? withBadge(child.label, unreadChats) : child.label,
+          })),
         }
       : { key: item.key, icon: item.icon, label: item.label },
   );

@@ -13,6 +13,20 @@ export interface FloatingButtonInput {
   shadow: FloatingButtonDoc['shadow'];
   animation: FloatingButtonDoc['animation'];
   subItems: FloatingButtonDoc['subItems'];
+  variant: FloatingButtonDoc['variant'];
+  size: FloatingButtonDoc['size'];
+  layout: FloatingButtonDoc['layout'];
+  positionPercent: number | null;
+  edgeOffset: number;
+  url: string;
+  openMode: FloatingButtonDoc['openMode'];
+  drawerDirection: FloatingButtonDoc['drawerDirection'];
+  drawerPercent: number;
+  navTabs: FloatingButtonDoc['navTabs'];
+  draggable: boolean;
+  startAt: Date | null;
+  endAt: Date | null;
+  showCountdown: boolean;
 }
 
 export async function listFloatingButtons(companyId: Types.ObjectId, groupId?: string) {

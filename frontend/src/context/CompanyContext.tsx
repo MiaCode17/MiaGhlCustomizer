@@ -7,6 +7,7 @@ interface CompanyContextValue {
   company: Company | null;
   isLoading: boolean;
   updateCompany: (input: CompanyUpdateInput) => Promise<void>;
+  setGhlApiToken: (token: string) => Promise<void>;
 }
 
 const CompanyContext = createContext<CompanyContextValue | undefined>(undefined);
@@ -34,9 +35,13 @@ export function CompanyProvider({ children }: { children: React.ReactNode }) {
     setCompany(updated);
   }, []);
 
+  const setGhlApiToken = useCallback(async (token: string) => {
+    setCompany(await companyService.setGhlApiToken(token));
+  }, []);
+
   const value = useMemo(
-    () => ({ company, isLoading, updateCompany }),
-    [company, isLoading, updateCompany],
+    () => ({ company, isLoading, updateCompany, setGhlApiToken }),
+    [company, isLoading, updateCompany, setGhlApiToken],
   );
 
   return <CompanyContext.Provider value={value}>{children}</CompanyContext.Provider>;

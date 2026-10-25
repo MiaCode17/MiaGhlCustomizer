@@ -1,6 +1,7 @@
 import { Types } from 'mongoose';
 import { Company } from '../../models/Company';
 import { HttpError } from '../../middleware/errorHandler';
+import { decryptSecret, encryptSecret } from '../../utils/secrets';
 
 export async function getCompany(companyId: Types.ObjectId) {
   const company = await Company.findById(companyId);
@@ -8,6 +9,24 @@ export async function getCompany(companyId: Types.ObjectId) {
     throw new HttpError(404, 'Company not found');
   }
   return company;
+}
+
+/** Stores (encrypted) or clears the company's GHL API token. An empty token clears it. */
+export async function setGhlApiToken(companyId: Types.ObjectId, token: string) {
+  const update = token
+    ? { $set: { ghlApiTokenEnc: encryptSecret(token), hasGhlApiToken: true } }
+    : { $unset: { ghlApiTokenEnc: '' }, $set: { hasGhlApiToken: false } };
+  const company = await Company.findByIdAndUpdate(companyId, update, { new: true });
+  if (!company) {
+    throw new HttpError(404, 'Company not found');
+  }
+  return company;
+}
+
+/** The decrypted GHL API token, or null if none is stored (or it can no longer be decrypted). */
+export async function getGhlApiToken(companyId: Types.ObjectId): Promise<string | null> {
+  const company = await Company.findById(companyId).select('+ghlApiTokenEnc').lean();
+  return company?.ghlApiTokenEnc ? decryptSecret(company.ghlApiTokenEnc) : null;
 }
 
 export interface CompanyUpdateInput {

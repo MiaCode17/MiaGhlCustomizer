@@ -1,4 +1,4 @@
-export type LoginPagePreset = 'split-left' | 'split-right' | 'centered' | 'full-bleed';
+export type LoginPagePreset = 'split-left' | 'split-right' | 'centered' | 'full-bleed' | 'shape-left' | 'shape-right';
 
 export interface CssVariable {
   name: string;

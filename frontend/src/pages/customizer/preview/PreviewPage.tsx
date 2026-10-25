@@ -56,8 +56,9 @@ export function PreviewPage() {
     };
   }, [groupId]);
 
-  const rightButtons = floatingButtons.filter((b) => b.position === 'right');
-  const bottomButtons = floatingButtons.filter((b) => b.position === 'bottom');
+  // The preview only draws two docks: left-edge buttons share the side dock, top-edge ones the bottom dock.
+  const rightButtons = floatingButtons.filter((b) => b.position === 'right' || b.position === 'left');
+  const bottomButtons = floatingButtons.filter((b) => b.position === 'bottom' || b.position === 'top');
 
   const headerBackground = gradientCss(theme, 'header', colorRuleValue(theme, 'Header Background', '#1e293b'));
   const sidebarBackground = gradientCss(theme, 'sidebar', colorRuleValue(theme, 'Sidebar Background', '#0f172a'));

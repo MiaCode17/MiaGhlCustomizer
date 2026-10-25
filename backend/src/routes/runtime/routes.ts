@@ -1,6 +1,5 @@
-import { Request, Router } from 'express';
-import { Types } from 'mongoose';
-import { env } from '../../config/env';
+import express, { Request, Router } from 'express';
+import { z } from 'zod';
 import { asyncHandler } from '../../middleware/asyncHandler';
 import { HttpError } from '../../middleware/errorHandler';
 import { Company } from '../../models/Company';
@@ -8,8 +7,22 @@ import { LoginPageConfig } from '../../models/LoginPageConfig';
 import { buildLoginCss } from '../../runtime/css';
 import { isRuntimeFeature, resolveAllFeatures, RUNTIME_FEATURES } from '../../runtime/resolve';
 import { buildEmbedScript, SCRIPT_FEATURES } from '../../runtime/scripts';
+import {
+  createLocationLink,
+  deleteLocationLink,
+  getUserLinksConfig,
+  LinkLimitError,
+  listLocationLinks,
+  serializeLink,
+  updateLocationLink,
+  verifyLocationAccess,
+} from '../../runtime/locationLinks';
+import { getUnreadCount, LOCATION_ID } from '../../runtime/unread';
 import { findScoped, resolveGroupId } from '../../utils/scope';
 import { buildRouter, RouteDef } from '../routeTable';
+import { chatRoutes } from './chatRoutes';
+import { feedbackRoutes } from './feedbackRoutes';
+import { apiBase, locationContext, resolveCompanyId } from './common';
 
 /**
  * Public, unauthenticated endpoints called from inside the live GHL portal by
@@ -19,41 +32,108 @@ import { buildRouter, RouteDef } from '../routeTable';
  * own white-label domain.
  */
 
-const OBJECT_ID = /^[a-f0-9]{24}$/i;
-const GHL_ID = /^[A-Za-z0-9]{1,64}$/;
+const OBJECT_ID_ONLY = /^[a-f0-9]{24}$/i;
+
+const locationLinkBodySchema = z.object({
+  title: z.string().trim().min(1).max(60),
+  url: z
+    .string()
+    .trim()
+    .max(2000)
+    .refine((u) => /^https?:\/\//i.test(u), 'The URL must start with http:// or https://'),
+  icon: z.string().trim().max(300).optional(),
+  openMode: z.enum(['new-tab', 'modal', 'drawer', 'same-tab']).default('new-tab'),
+});
 
 /**
- * Accepts either our internal company _id or the agency's GHL company ID, so the
- * install snippet can use the ID agencies already know from GHL.
+ * Resolves a signed-in sub-account user's write request: the feature must be on for the
+ * location's group, and the user's GHL session (X-GHL-Token) must be able to read the location.
  */
-async function resolveCompanyId(raw: unknown): Promise<Types.ObjectId> {
-  if (typeof raw === 'string' && OBJECT_ID.test(raw)) {
-    return new Types.ObjectId(raw);
+async function authoriseLinkWrite(req: Request) {
+  const companyId = await resolveCompanyId(req.query.company_id);
+  const { locationId, planId } = locationContext(req);
+  if (!locationId || !LOCATION_ID.test(locationId)) {
+    throw new HttpError(400, 'A valid locationId is required');
   }
-  if (typeof raw !== 'string' || !GHL_ID.test(raw)) {
-    throw new HttpError(400, 'A valid company_id is required');
+  const token = req.get('x-ghl-token');
+  if (!token || token.length > 4000) {
+    throw new HttpError(401, 'A GHL session token is required');
   }
-  const company = await Company.findOne({ ghlCompanyId: raw }).select('_id').lean();
-  if (!company) {
-    throw new HttpError(404, 'No account is linked to this GHL company ID');
+  const groupId = await resolveGroupId(companyId, { locationId, planId });
+  const config = await getUserLinksConfig(companyId, groupId);
+  if (!config.enabled) throw new HttpError(403, 'Location links are not enabled');
+  if (!(await verifyLocationAccess(token, locationId))) {
+    throw new HttpError(403, 'You do not have access to this location');
   }
-  return company._id;
+  return { companyId, locationId, config };
 }
 
-function queryString(req: Request, key: string): string | undefined {
-  const raw = req.query[key];
-  return typeof raw === 'string' && raw.trim().length > 0 ? raw.trim() : undefined;
-}
-
-function locationContext(req: Request) {
-  return { locationId: queryString(req, 'locationId'), planId: queryString(req, 'planId') };
-}
-
-function apiBase(req: Request): string {
-  return env.PUBLIC_BASE_URL ?? `${req.protocol}://${req.get('host')}`;
-}
+const jsonBody = express.json({ limit: '10kb' });
 
 const runtimeRoutes: RouteDef[] = [
+  ...chatRoutes,
+  ...feedbackRoutes,
+  {
+    // The links users of a location created for themselves (public, like the rest of the runtime).
+    method: 'get',
+    url: '/location-links',
+    handler: asyncHandler(async (req, res) => {
+      const companyId = await resolveCompanyId(req.query.company_id);
+      const { locationId, planId } = locationContext(req);
+      if (!locationId || !LOCATION_ID.test(locationId)) {
+        throw new HttpError(400, 'A valid locationId is required');
+      }
+      const groupId = await resolveGroupId(companyId, { locationId, planId });
+      const config = await getUserLinksConfig(companyId, groupId);
+      if (!config.enabled) {
+        res.json({ enabled: false, maxLinks: config.maxLinks, links: [] });
+        return;
+      }
+      const links = await listLocationLinks(companyId, locationId);
+      res.set('Cache-Control', 'no-store');
+      res.json({ enabled: true, maxLinks: config.maxLinks, links: links.map(serializeLink) });
+    }),
+  },
+  {
+    method: 'post',
+    url: '/location-links',
+    middlewares: [jsonBody],
+    handler: asyncHandler(async (req, res) => {
+      const { companyId, locationId, config } = await authoriseLinkWrite(req);
+      const input = locationLinkBodySchema.parse(req.body);
+      try {
+        const link = await createLocationLink(companyId, locationId, config.maxLinks, input);
+        res.status(201).json({ link: serializeLink(link) });
+      } catch (err) {
+        if (err instanceof LinkLimitError) throw new HttpError(409, err.message);
+        throw err;
+      }
+    }),
+  },
+  {
+    method: 'put',
+    url: '/location-links/:id',
+    middlewares: [jsonBody],
+    handler: asyncHandler(async (req, res) => {
+      if (!OBJECT_ID_ONLY.test(req.params.id)) throw new HttpError(400, 'Invalid link id');
+      const { companyId, locationId } = await authoriseLinkWrite(req);
+      const input = locationLinkBodySchema.parse(req.body);
+      const link = await updateLocationLink(companyId, locationId, req.params.id, input);
+      if (!link) throw new HttpError(404, 'Link not found');
+      res.json({ link: serializeLink(link) });
+    }),
+  },
+  {
+    method: 'delete',
+    url: '/location-links/:id',
+    handler: asyncHandler(async (req, res) => {
+      if (!OBJECT_ID_ONLY.test(req.params.id)) throw new HttpError(400, 'Invalid link id');
+      const { companyId, locationId } = await authoriseLinkWrite(req);
+      const link = await deleteLocationLink(companyId, locationId, req.params.id);
+      if (!link) throw new HttpError(404, 'Link not found');
+      res.status(204).send();
+    }),
+  },
   {
     // Every feature's resolved config in one round trip — what the embed script uses.
     method: 'get',
@@ -61,7 +141,7 @@ const runtimeRoutes: RouteDef[] = [
     handler: asyncHandler(async (req, res) => {
       const companyId = await resolveCompanyId(req.query.company_id);
       const groupId = await resolveGroupId(companyId, locationContext(req));
-      const features = await resolveAllFeatures(companyId, groupId);
+      const features = await resolveAllFeatures(companyId, groupId, { locationId: locationContext(req).locationId });
       res.set('Cache-Control', 'public, max-age=30');
       res.json({ groupId, features });
     }),
@@ -76,9 +156,28 @@ const runtimeRoutes: RouteDef[] = [
       }
       const companyId = await resolveCompanyId(req.query.company_id);
       const groupId = await resolveGroupId(companyId, locationContext(req));
-      const config = await RUNTIME_FEATURES[feature](companyId, groupId);
+      const config = await RUNTIME_FEATURES[feature](companyId, groupId, {
+        locationId: locationContext(req).locationId,
+      });
       res.set('Cache-Control', 'public, max-age=30');
       res.json({ groupId, config });
+    }),
+  },
+  {
+    // Total unread conversations for a location, polled by the unread-badge script.
+    // Cached server-side, so many tabs/sub-accounts cost one upstream call per minute each.
+    method: 'get',
+    url: '/unread-count',
+    handler: asyncHandler(async (req, res) => {
+      const companyId = await resolveCompanyId(req.query.company_id);
+      const { locationId, planId } = locationContext(req);
+      if (!locationId || !LOCATION_ID.test(locationId)) {
+        throw new HttpError(400, 'A valid locationId is required');
+      }
+      const groupId = await resolveGroupId(companyId, { locationId, planId });
+      const result = await getUnreadCount(companyId, groupId, locationId);
+      res.set('Cache-Control', 'public, max-age=30');
+      res.json(result);
     }),
   },
   {

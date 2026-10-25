@@ -13,7 +13,8 @@ import {
 
 const customFieldCampaignInputSchema = z.object({
   name: z.string().min(1),
-  exposedFieldKeys: z.array(z.string()).default([]),
+  exposedFieldKeys: z.array(z.string().trim().min(1)).default([]),
+  mode: z.enum(['lock', 'hide']).default('lock'),
 });
 
 function getGroupId(req: { query: { groupId?: unknown } }): string | undefined {

@@ -6,6 +6,9 @@ export interface LoaderConfigInput {
   enabled: boolean;
   loaderType: LoaderConfigDoc['loaderType'];
   customImageUrl?: string;
+  color: string;
+  size: LoaderConfigDoc['size'];
+  library: LoaderConfigDoc['library'];
 }
 
 export async function getLoaderConfig(companyId: Types.ObjectId, groupId?: string) {

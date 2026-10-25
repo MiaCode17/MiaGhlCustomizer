@@ -11,4 +11,10 @@ export const companyService = {
     const { data } = await apiClient.put<{ company: Company }>('/company/update', input);
     return data.company;
   },
+
+  /** Saves a GHL Private Integration token; an empty string removes it. */
+  async setGhlApiToken(token: string): Promise<Company> {
+    const { data } = await apiClient.put<{ company: Company }>('/company/ghl-token', { token });
+    return data.company;
+  },
 };

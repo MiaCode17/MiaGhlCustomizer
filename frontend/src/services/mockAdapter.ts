@@ -5,14 +5,21 @@ import { Theme, defaultSidebarStyle } from '../types/theme';
 import { SpecialTheme } from '../types/specialTheme';
 import { LogoCampaign, LogoCampaignInput } from '../types/logo';
 import { LoginPageConfig } from '../types/loginPage';
-import { ButtonSurface, InjectedButton, InjectedButtonInput } from '../types/button';
-import { FloatingButton, FloatingButtonInput } from '../types/floatingButton';
+import { ButtonSurface, InjectedButton, InjectedButtonInput, buttonBehaviorDefaults } from '../types/button';
+import { FloatingButton, FloatingButtonInput, floatingButtonDefaults } from '../types/floatingButton';
 import { DynamicLink, DynamicLinkInput } from '../types/dynamicLink';
-import { MenuEdit } from '../types/menuEdit';
+import { allRoles, MenuEdit } from '../types/menuEdit';
 import { CustomFieldCampaign, CustomFieldCampaignInput } from '../types/customField';
 import { Banner, BannerInput } from '../types/banner';
-import { ChatBubbleConfig } from '../types/chatBubble';
+import { ChatBubbleConfig, emptyChatBubbleConfig } from '../types/chatBubble';
+import { emptyHeroBanner, HeroBanner, HeroBannerInput } from '../types/heroBanner';
+import type { PremiumThemeSettings } from './premiumThemeService';
+import { FeedbackConfig, FeedbackResponse, FeedbackStats, emptyFeedbackConfig } from '../types/feedback';
+import { GuideSettings, Tour, TourInput, emptyGuideSettings } from '../types/guide';
+import { SupportMessage, SupportTicket } from '../types/supportChat';
 import { LoaderConfig } from '../types/loader';
+import { LaunchpadTile, LaunchpadTileInput } from '../types/launchpad';
+import { LocationLink } from '../types/locationLink';
 import { MiscSettings } from '../types/miscSettings';
 import { BookACallConfig } from '../types/bookACall';
 import { ConversationStyleConfig, emptyConversationStyle } from '../types/conversationStyle';
@@ -72,6 +79,7 @@ let company: Company = {
   id: MOCK_COMPANY_ID,
   name: 'Mia GHL',
   ghlCompanyId: '',
+  hasGhlApiToken: false,
 };
 
 // Mock mode starts already "logged in" so the UI preview isn't gated behind
@@ -97,6 +105,20 @@ let theme: Theme = {
   sidebarStyle: defaultSidebarStyle,
   enabled: true,
 };
+
+let premiumTheme: PremiumThemeSettings | null = null;
+
+let heroBanners: HeroBanner[] = [
+  {
+    ...emptyHeroBanner,
+    _id: 'hero-1',
+    companyId: MOCK_COMPANY_ID,
+    groupId: '',
+    name: 'Welcome banner',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+];
 
 let specialTheme: SpecialTheme = {
   enabled: true,
@@ -150,6 +172,7 @@ const BUTTON_STYLE_KIT_DEFAULTS = {
   shadow: 'none' as const,
   animation: 'none' as const,
   fullWidth: false,
+  ...buttonBehaviorDefaults(),
 };
 
 const buttons: InjectedButton[] = [
@@ -224,6 +247,7 @@ const floatingButtons: FloatingButton[] = [
     _id: 'fb-1',
     companyId: MOCK_COMPANY_ID,
     groupId: MOCK_GROUP_ID,
+    ...floatingButtonDefaults(),
     position: 'right',
     label: 'Quick Help',
     backgroundColor: '#6366F1',
@@ -242,6 +266,7 @@ const floatingButtons: FloatingButton[] = [
     _id: 'fb-2',
     companyId: MOCK_COMPANY_ID,
     groupId: MOCK_GROUP_ID,
+    ...floatingButtonDefaults(),
     position: 'bottom',
     label: 'Feedback',
     backgroundColor: '#22C55E',
@@ -298,12 +323,34 @@ const dynamicLinks: DynamicLink[] = [
 ];
 
 let menuEdit: MenuEdit = {
-  renamed: [{ originalLabel: 'Opportunities', newLabel: 'Deals' }],
+  renamed: [{ originalLabel: 'Opportunities', newLabel: 'Deals', icon: '💼' }],
   hidden: ['App Marketplace'],
-  settingsMenuItems: [{ name: 'Brand Settings', link: '/settings/brand' }],
+  hiddenByRole: [{ label: 'Reputation', roleKeys: ['account_users'] }],
+  moved: [{ label: 'Reporting', position: 'after', target: 'Dashboard' }],
+  settingsMenuItems: [
+    { type: 'divider', name: 'Brand', link: '', openMode: 'auto' },
+    { type: 'link', name: 'Brand Settings', link: '/settings/brand', openMode: 'auto' },
+  ],
   navTree: [
-    { id: 'nav-1', label: 'Resources', order: 0 },
-    { id: 'nav-2', label: 'Help Center', url: 'https://help.miaghl.com', parentId: 'nav-1', order: 0 },
+    { id: 'nav-1', label: 'Resources', order: 0, icon: '📚', openMode: 'auto', permissions: allRoles() },
+    {
+      id: 'nav-2',
+      label: 'Help Center',
+      url: 'https://help.miaghl.com',
+      parentId: 'nav-1',
+      order: 0,
+      openMode: 'modal',
+      permissions: allRoles(),
+    },
+  ],
+  extendedTabs: [
+    {
+      id: 'tab-1',
+      label: 'Playbook',
+      url: 'https://miaghl.com/playbook?loc={{location.id}}',
+      page: 'opportunities',
+      permissions: allRoles(),
+    },
   ],
   toolCategories: [
     {
@@ -317,8 +364,8 @@ let menuEdit: MenuEdit = {
 };
 
 const customFieldCampaigns: CustomFieldCampaign[] = [
-  { _id: 'cf-1', name: 'Sales Enablement', exposedFieldKeys: ['contact.lead_source', 'opportunity.close_probability'] },
-  { _id: 'cf-2', name: 'Onboarding', exposedFieldKeys: ['contact.company_size', 'contact.timezone'] },
+  { _id: 'cf-1', name: 'Sales Enablement', exposedFieldKeys: ['contact.lead_source', 'opportunity.close_probability'], mode: 'lock' },
+  { _id: 'cf-2', name: 'Onboarding', exposedFieldKeys: ['contact.company_size', 'contact.timezone'], mode: 'hide' },
 ];
 
 const banners: Banner[] = [
@@ -349,6 +396,7 @@ const banners: Banner[] = [
 ];
 
 let chatBubble: ChatBubbleConfig = {
+  ...emptyChatBubbleConfig,
   enabled: true,
   title: 'Chat with us',
   subtitle: 'We typically reply within a few minutes',
@@ -367,6 +415,9 @@ let loader: LoaderConfig = {
   enabled: true,
   loaderType: 'dots',
   customImageUrl: undefined,
+  color: '#4f46e5',
+  size: 'medium',
+  library: [],
 };
 
 let bookACall: BookACallConfig = {
@@ -379,6 +430,62 @@ let bookACall: BookACallConfig = {
 
 let conversationStyle: ConversationStyleConfig = emptyConversationStyle;
 
+let launchpadTiles: LaunchpadTile[] = [
+  {
+    _id: 'lp-1',
+    companyId: MOCK_COMPANY_ID,
+    groupId: MOCK_GROUP_ID,
+    order: 0,
+    kind: 'custom',
+    nativeId: '',
+    description: 'Watch the 3-minute welcome video',
+    imageUrl: '',
+    buttonText: 'Watch now',
+    url: 'https://miaghl.com/welcome?loc={{location.id}}',
+    openMode: 'modal',
+    hidden: false,
+    createdAt: '2026-09-01T10:00:00.000Z',
+    updatedAt: '2026-09-01T10:00:00.000Z',
+  },
+];
+
+let locationLinks: LocationLink[] = [
+  {
+    _id: 'll-1',
+    companyId: MOCK_COMPANY_ID,
+    locationId: 'loc-1001',
+    title: 'Client billing portal',
+    url: 'https://billing.example.com',
+    icon: '💳',
+    openMode: 'modal',
+    createdAt: '2026-09-10T10:00:00.000Z',
+    updatedAt: '2026-09-10T10:00:00.000Z',
+  },
+];
+
+const supportMessages: Record<string, SupportMessage[]> = {
+  'tk-1': [
+    { id: 'sm-1', sender: 'visitor', text: 'Hi, can you help me connect my domain?', authorName: 'Ann Lee', at: Date.now() - 3600_000 },
+    { id: 'sm-2', sender: 'agent', text: 'Of course! Which provider is it with?', authorName: 'Support', at: Date.now() - 3500_000 },
+    { id: 'sm-3', sender: 'visitor', text: 'GoDaddy. I have the DNS page open.', authorName: 'Ann Lee', at: Date.now() - 600_000 },
+  ],
+  'tk-2': [{ id: 'sm-4', sender: 'visitor', text: 'Billing question about my last invoice', authorName: 'Bob Stone', at: Date.now() - 86400_000 }],
+};
+let supportTickets: SupportTicket[] = [
+  {
+    id: 'tk-1', locationId: 'loc-1001', status: 'open', visitorName: 'Ann Lee', visitorEmail: 'ann@example.com',
+    subject: 'Hi, can you help me connect my domain?', lastMessageAt: new Date(Date.now() - 600_000).toISOString(),
+    lastMessageFrom: 'visitor', lastMessagePreview: 'GoDaddy. I have the DNS page open.', messageCount: 3, unreadForAgent: 1,
+    closedAt: null, closedBy: null, createdAt: new Date(Date.now() - 3600_000).toISOString(),
+  },
+  {
+    id: 'tk-2', locationId: 'loc-1002', status: 'closed', visitorName: 'Bob Stone', visitorEmail: 'bob@example.com',
+    subject: 'Billing question about my last invoice', lastMessageAt: new Date(Date.now() - 86400_000).toISOString(),
+    lastMessageFrom: 'system', lastMessagePreview: 'The chat was closed by our team.', messageCount: 2, unreadForAgent: 0,
+    closedAt: new Date(Date.now() - 86000_000).toISOString(), closedBy: 'agent', createdAt: new Date(Date.now() - 90000_000).toISOString(),
+  },
+];
+
 let miscSettings: MiscSettings = {
   tooltip: { enabled: true, buttonText: 'Need help?', placement: 'bottom-right' },
   addonBanner: {
@@ -388,8 +495,18 @@ let miscSettings: MiscSettings = {
     message: 'Unlock premium automation add-ons for your agency.',
     ctaUrl: 'https://miaghl.com/addons',
   },
-  membership: { enabled: true, allowedLocationIds: ['loc-1001', 'loc-1002'] },
-  unreadBadge: { enabled: true },
+  membership: {
+    enabled: true,
+    allowedLocationIds: ['loc-1001', 'loc-1002'],
+    buttonLabel: 'My Membership',
+    url: 'https://miaghl.com/membership/{{location.id}}',
+    openMode: 'modal',
+    icon: undefined,
+    backgroundColor: '#4f46e5',
+    textColor: '#ffffff',
+  },
+  unreadBadge: { enabled: true, badgeColor: '#2563eb' },
+  userLinks: { enabled: true, maxLinks: 10 },
 };
 
 let groups: Group[] = [
@@ -404,6 +521,57 @@ let groups: Group[] = [
     updatedAt: nowIso(),
   },
 ];
+
+let tours: Tour[] = [
+  {
+    _id: 'tour-1',
+    companyId: MOCK_COMPANY_ID,
+    groupId: '',
+    name: 'Welcome to your dashboard',
+    enabled: true,
+    pages: [],
+    autoStart: 'first-visit',
+    order: 0,
+    permissions: { agency_admins: true, agency_users: true, account_admins: true, account_users: true },
+    steps: [
+      { title: 'Welcome', content: 'A quick look around.', selector: '', clickSelector: '', placement: 'center', mediaType: 'none', mediaUrl: '', ctaLabel: '', ctaUrl: '' },
+      { title: 'Contacts', content: 'Your people live here.', selector: '#sb_contacts', clickSelector: '', placement: 'auto', mediaType: 'none', mediaUrl: '', ctaLabel: '', ctaUrl: '' },
+    ],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+];
+let guideSettings: GuideSettings = { ...emptyGuideSettings };
+let feedbackConfig: FeedbackConfig = { ...emptyFeedbackConfig };
+const feedbackResponses: FeedbackResponse[] = [
+  { id: 'fr-1', kind: 'rating', ratingType: 'stars', rating: 5, comment: 'Love the new look', reasons: [], userName: 'Ann Lee', userEmail: 'ann@example.com', locationId: 'LOC1', ticketId: null, createdAt: new Date().toISOString() },
+  { id: 'fr-2', kind: 'cancellation', ratingType: null, rating: null, comment: '', reasons: ['Too expensive'], userName: 'Bo Chan', userEmail: 'bo@example.com', locationId: 'LOC2', ticketId: null, createdAt: new Date().toISOString() },
+];
+
+function mockFeedbackStats(): FeedbackStats {
+  const rated = feedbackResponses.filter((r) => r.rating !== null);
+  const distribution = [0, 0, 0, 0, 0];
+  rated.forEach((r) => {
+    const stars = r.ratingType === 'ten' ? (r.rating ?? 0) / 2 : (r.rating ?? 0);
+    distribution[Math.min(5, Math.max(1, Math.ceil(stars))) - 1] += 1;
+  });
+  const reasons = new Map<string, number>();
+  feedbackResponses.forEach((r) => r.reasons.forEach((x) => reasons.set(x, (reasons.get(x) ?? 0) + 1)));
+  const byDay = Array.from({ length: 30 }, (_, i) => ({
+    date: new Date(Date.now() - (29 - i) * 86400000).toISOString().slice(0, 10),
+    count: i === 29 ? feedbackResponses.length : 0,
+  }));
+  return {
+    total: feedbackResponses.length,
+    rating: { count: rated.length, average: rated.length ? rated.reduce((s, r) => s + (r.rating ?? 0), 0) / rated.length : null, distribution },
+    chat: { count: 0, average: null },
+    cancellation: {
+      count: feedbackResponses.filter((r) => r.kind === 'cancellation').length,
+      reasons: [...reasons].map(([reason, count]) => ({ reason, count })),
+    },
+    byDay,
+  };
+}
 
 function parseBody(config: InternalAxiosRequestConfig): unknown {
   const data: unknown = config.data;
@@ -457,6 +625,10 @@ export const mockAdapter = async (
   if (method === 'get' && path === '/company') {
     return respond(config, { company });
   }
+  if (method === 'put' && path === '/company/ghl-token') {
+    company = { ...company, hasGhlApiToken: Boolean((body as { token?: string }).token) };
+    return respond(config, { company });
+  }
   if (method === 'put' && path === '/company/update') {
     company = { ...company, ...(body as CompanyUpdateInput) };
     return respond(config, { company });
@@ -468,6 +640,33 @@ export const mockAdapter = async (
   if (method === 'put' && path === '/theme/update') {
     theme = body as Theme;
     return respond(config, { theme });
+  }
+
+  if (method === 'get' && path === '/hero-banners') {
+    return respond(config, { banners: heroBanners });
+  }
+  if (method === 'post' && path === '/hero-banners') {
+    const banner: HeroBanner = { _id: nextId('hero'), companyId: MOCK_COMPANY_ID, groupId: '', ...(body as HeroBannerInput), createdAt: nowIso(), updatedAt: nowIso() };
+    heroBanners = [...heroBanners, banner];
+    return respond(config, { banner }, 201);
+  }
+  if (method === 'put' && path.startsWith('/hero-banners/')) {
+    const id = path.slice('/hero-banners/'.length);
+    heroBanners = heroBanners.map((b) => (b._id === id ? { ...b, ...(body as HeroBannerInput), updatedAt: nowIso() } : b));
+    return respond(config, { banner: heroBanners.find((b) => b._id === id) });
+  }
+  if (method === 'delete' && path.startsWith('/hero-banners/')) {
+    const id = path.slice('/hero-banners/'.length);
+    heroBanners = heroBanners.filter((b) => b._id !== id);
+    return respond(config, null, 204);
+  }
+
+  if (method === 'get' && path === '/premium-theme') {
+    return respond(config, { premiumTheme });
+  }
+  if (method === 'put' && path === '/premium-theme/update') {
+    premiumTheme = body as PremiumThemeSettings;
+    return respond(config, { premiumTheme });
   }
 
   if (method === 'get' && path === '/special-theme') {
@@ -629,6 +828,86 @@ export const mockAdapter = async (
     return respond(config, { menuEdit });
   }
 
+  if (method === 'get' && path === '/location-links') {
+    const loc = query.locationId;
+    return respond(config, { links: loc ? locationLinks.filter((l) => l.locationId === loc) : locationLinks });
+  }
+  if (method === 'delete' && path.startsWith('/location-links/')) {
+    const id = path.slice('/location-links/'.length);
+    locationLinks = locationLinks.filter((l) => l._id !== id);
+    return respond(config, null, 204);
+  }
+
+  if (method === 'get' && path === '/support-chat/unread') {
+    return respond(config, { count: supportTickets.filter((t) => t.status === 'open' && t.unreadForAgent > 0).length });
+  }
+  if (method === 'get' && path === '/support-chat/tickets') {
+    const status = query.status ?? 'open';
+    const search = (query.search ?? '').toLowerCase();
+    const list = supportTickets.filter(
+      (t) =>
+        (status === 'all' || t.status === status) &&
+        (!search || [t.visitorName, t.visitorEmail, t.subject, t.locationId].some((v) => v.toLowerCase().includes(search))),
+    );
+    return respond(config, { tickets: list, total: list.length, page: 1, limit: 50 });
+  }
+  const chatMatch = path.match(/^\/support-chat\/tickets\/([^/]+)(?:\/(messages|typing|close|reopen))?$/);
+  if (chatMatch) {
+    const [, id, action] = chatMatch;
+    const found = supportTickets.find((t) => t.id === id);
+    if (!found) return Promise.reject({ response: { status: 404, data: { error: 'Chat not found' } } });
+    if (method === 'get' && !action) {
+      supportTickets = supportTickets.map((t) => (t.id === id ? { ...t, unreadForAgent: 0 } : t));
+      return respond(config, { ticket: supportTickets.find((t) => t.id === id), messages: supportMessages[id] ?? [] });
+    }
+    if (method === 'post' && action === 'messages') {
+      const text = String((body as { text?: string }).text ?? '');
+      const sent: SupportMessage = { id: nextId('sm'), sender: 'agent', text, authorName: String((body as { authorName?: string }).authorName ?? 'Support'), at: Date.now() };
+      supportMessages[id] = [...(supportMessages[id] ?? []), sent];
+      supportTickets = supportTickets.map((t) => (t.id === id ? { ...t, lastMessageAt: new Date().toISOString(), lastMessageFrom: 'agent', lastMessagePreview: text, messageCount: t.messageCount + 1 } : t));
+      return respond(config, { message: sent }, 201);
+    }
+    if (method === 'post' && action === 'typing') return respond(config, null, 204);
+    if (method === 'post' && (action === 'close' || action === 'reopen')) {
+      const closing = action === 'close';
+      supportTickets = supportTickets.map((t) => (t.id === id ? { ...t, status: closing ? 'closed' : 'open', closedAt: closing ? new Date().toISOString() : null, closedBy: closing ? 'agent' : null } : t));
+      return respond(config, null, 204);
+    }
+    if (method === 'delete' && !action) {
+      supportTickets = supportTickets.filter((t) => t.id !== id);
+      delete supportMessages[id];
+      return respond(config, null, 204);
+    }
+  }
+
+  if (method === 'get' && path === '/launchpad') {
+    return respond(config, { tiles: launchpadTiles });
+  }
+  if (method === 'post' && path === '/launchpad') {
+    const tile: LaunchpadTile = {
+      _id: nextId('lp'),
+      companyId: MOCK_COMPANY_ID,
+      groupId: MOCK_GROUP_ID,
+      ...(body as LaunchpadTileInput),
+      createdAt: nowIso(),
+      updatedAt: nowIso(),
+    };
+    launchpadTiles = [...launchpadTiles, tile];
+    return respond(config, { tile }, 201);
+  }
+  if (method === 'put' && path.startsWith('/launchpad/')) {
+    const id = path.slice('/launchpad/'.length);
+    launchpadTiles = launchpadTiles.map((t) =>
+      t._id === id ? { ...t, ...(body as LaunchpadTileInput), updatedAt: nowIso() } : t,
+    );
+    return respond(config, { tile: launchpadTiles.find((t) => t._id === id) });
+  }
+  if (method === 'delete' && path.startsWith('/launchpad/')) {
+    const id = path.slice('/launchpad/'.length);
+    launchpadTiles = launchpadTiles.filter((t) => t._id !== id);
+    return respond(config, null, 204);
+  }
+
   if (method === 'get' && path === '/custom-fields') {
     return respond(config, { campaigns: customFieldCampaigns });
   }
@@ -638,6 +917,7 @@ export const mockAdapter = async (
       _id: nextId('cf'),
       name: input.name,
       exposedFieldKeys: input.exposedFieldKeys,
+      mode: input.mode,
     };
     customFieldCampaigns.push(campaign);
     return respond(config, { campaign }, 201);
@@ -686,6 +966,64 @@ export const mockAdapter = async (
     const index = banners.findIndex((item) => item._id === id);
     if (index !== -1) banners.splice(index, 1);
     return respond(config, {});
+  }
+
+  if (method === 'get' && path === '/guides/tours') {
+    return respond(config, { tours });
+  }
+  if (method === 'post' && path === '/guides/tours') {
+    const tour: Tour = { _id: nextId('tour'), companyId: MOCK_COMPANY_ID, groupId: '', ...(body as TourInput), createdAt: nowIso(), updatedAt: nowIso() };
+    tours = [...tours, tour];
+    return respond(config, { tour }, 201);
+  }
+  if (method === 'put' && path.startsWith('/guides/tours/')) {
+    const id = path.slice('/guides/tours/'.length);
+    tours = tours.map((t) => (t._id === id ? { ...t, ...(body as TourInput), updatedAt: nowIso() } : t));
+    return respond(config, { tour: tours.find((t) => t._id === id) });
+  }
+  if (method === 'delete' && path.startsWith('/guides/tours/')) {
+    const id = path.slice('/guides/tours/'.length);
+    tours = tours.filter((t) => t._id !== id);
+    return respond(config, null, 204);
+  }
+  if (method === 'get' && path === '/guides/settings') {
+    return respond(config, { settings: guideSettings });
+  }
+  if (method === 'put' && path === '/guides/settings/update') {
+    guideSettings = body as GuideSettings;
+    return respond(config, { settings: guideSettings });
+  }
+
+  if (method === 'get' && path === '/feedback/config') {
+    return respond(config, { config: feedbackConfig });
+  }
+  if (method === 'put' && path === '/feedback/config/update') {
+    feedbackConfig = body as FeedbackConfig;
+    return respond(config, { config: feedbackConfig });
+  }
+  if (method === 'get' && path === '/feedback/responses') {
+    const kind = query.kind && query.kind !== 'all' ? query.kind : null;
+    const needle = (query.search ?? '').toLowerCase();
+    const rows = feedbackResponses.filter(
+      (r) => (!kind || r.kind === kind) && (!needle || (r.comment + ' ' + r.userName + ' ' + r.userEmail).toLowerCase().includes(needle)),
+    );
+    return respond(config, { responses: rows, total: rows.length, page: 1, limit: 25 });
+  }
+  if (method === 'get' && path === '/feedback/stats') {
+    return respond(config, { stats: mockFeedbackStats() });
+  }
+  if (method === 'get' && path === '/feedback/export') {
+    const cell = (v: unknown) => '"' + String(v).replace(/"/g, '""') + '"';
+    const lines = feedbackResponses.map((r) =>
+      [r.createdAt, r.kind, r.rating ?? '', r.reasons.join('; '), r.comment, r.userName, r.userEmail].map(cell).join(','),
+    );
+    return respond(config, ['When,Type,Rating,Reasons,Comment,Name,Email', ...lines].join('\n'));
+  }
+  if (method === 'delete' && path.startsWith('/feedback/responses/')) {
+    const id = path.slice('/feedback/responses/'.length);
+    const i = feedbackResponses.findIndex((r) => r.id === id);
+    if (i !== -1) feedbackResponses.splice(i, 1);
+    return respond(config, null, 204);
   }
 
   if (method === 'get' && path === '/chat-bubble') {
@@ -754,7 +1092,8 @@ export const mockAdapter = async (
     return respond(config, {
       groupId,
       features: {
-        theme: { enabled: theme.enabled },
+        theme: { enabled: theme.enabled && !premiumTheme?.enabled },
+        'premium-theme': { enabled: Boolean(premiumTheme?.enabled && premiumTheme.theme), theme: premiumTheme?.theme ?? null },
         'special-theme': { enabled: specialTheme.enabled },
         logo: on,
         buttons: on,
@@ -763,10 +1102,19 @@ export const mockAdapter = async (
         'dynamic-links': on,
         menu: on,
         banners: on,
+        'hero-banners': { enabled: heroBanners.some((b) => b.enabled) },
         'chat-bubble': { enabled: chatBubble.enabled },
         loader: { enabled: loader.enabled },
         'conversation-style': { enabled: conversationStyle.enabled },
         misc: { enabled: miscSettings.tooltip.enabled || miscSettings.addonBanner.enabled },
+        membership: { enabled: miscSettings.membership.enabled && Boolean(miscSettings.membership.url) },
+        'unread-badge': { enabled: miscSettings.unreadBadge.enabled && company.hasGhlApiToken },
+        'custom-fields': { enabled: customFieldCampaigns.length > 0 },
+        'opportunity-tabs': { enabled: buttons.some((b) => b.surface === 'opportunity-tab') },
+        launchpad: { enabled: launchpadTiles.length > 0 },
+        'user-links': { enabled: miscSettings.userLinks.enabled && Boolean(query.locationId) },
+        guides: { enabled: tours.some((t) => t.enabled) && guideSettings.enabled },
+        feedback: { enabled: feedbackConfig.enabled || feedbackConfig.cancel.enabled },
       },
     });
   }

@@ -14,7 +14,7 @@ const dynamicLinkInputSchema = z.object({
   title: z.string().min(1),
   url: z.string().min(1),
   icon: z.string().optional(),
-  openMode: z.enum(['same-tab', 'new-tab', 'modal']),
+  openMode: z.enum(['same-tab', 'new-tab', 'modal', 'drawer']),
   roleTarget: z.enum(['all', 'owner', 'admin']),
 });
 

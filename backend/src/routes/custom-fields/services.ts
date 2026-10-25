@@ -1,10 +1,11 @@
 import { Types } from 'mongoose';
-import { CustomFieldCampaign } from '../../models/CustomFieldCampaign';
+import { CustomFieldCampaign, CustomFieldMode } from '../../models/CustomFieldCampaign';
 import { scopeFilter } from '../../utils/scope';
 
 export interface CustomFieldCampaignInput {
   name: string;
   exposedFieldKeys: string[];
+  mode: CustomFieldMode;
 }
 
 export async function listCustomFieldCampaigns(companyId: Types.ObjectId, groupId?: string) {

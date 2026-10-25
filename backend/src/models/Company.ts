@@ -9,6 +9,13 @@ export interface CompanyDoc {
    * agencies already know from GHL.
    */
   ghlCompanyId?: string;
+  /**
+   * A GHL Private Integration token (encrypted, never serialized to the client). Lets the
+   * server read data the browser can't, such as a location's unread conversation count.
+   */
+  ghlApiTokenEnc?: string;
+  /** Mirrors whether ghlApiTokenEnc is set, so it can be reported without selecting the secret. */
+  hasGhlApiToken: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -17,6 +24,8 @@ const companySchema = new Schema<CompanyDoc>(
   {
     name: { type: String, required: true, trim: true },
     ghlCompanyId: { type: String, trim: true },
+    ghlApiTokenEnc: { type: String, select: false },
+    hasGhlApiToken: { type: Boolean, default: false },
   },
   { timestamps: true },
 );

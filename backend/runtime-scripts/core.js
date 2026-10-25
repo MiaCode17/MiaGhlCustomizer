@@ -34,6 +34,7 @@
     companyId: BOOT.companyId,
     apiBase: BOOT.apiBase,
     sel: BOOT.selectors,
+    icons: BOOT.icons || {},
     features: {},
     active: {},
     config: null,
@@ -166,11 +167,41 @@
     return /^(https?:\/\/|\/|data:image\/)/i.test(String(value || '').trim());
   };
 
-  /** Renders an icon value: an image URL becomes <img>, anything else (emoji/text) a <span>. */
+  /** An inline SVG for one of the built-in icon names (see runtime/icons.ts), or null. */
+  C.svgIcon = function (name, size) {
+    var paths = Object.prototype.hasOwnProperty.call(C.icons, name) ? C.icons[name] : null;
+    if (!paths) return null;
+    var NS = 'http://www.w3.org/2000/svg';
+    var svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('width', String(size));
+    svg.setAttribute('height', String(size));
+    svg.setAttribute('fill', 'none');
+    svg.setAttribute('stroke', 'currentColor');
+    svg.setAttribute('stroke-width', '2');
+    svg.setAttribute('stroke-linecap', 'round');
+    svg.setAttribute('stroke-linejoin', 'round');
+    svg.setAttribute('aria-hidden', 'true');
+    svg.style.display = 'inline-block';
+    svg.style.flexShrink = '0';
+    paths.forEach(function (d) {
+      var path = document.createElementNS(NS, 'path');
+      path.setAttribute('d', d);
+      svg.appendChild(path);
+    });
+    return svg;
+  };
+
+  /**
+   * Renders an icon value: a built-in icon name (e.g. "chat") becomes an inline SVG that takes
+   * the surrounding text color, an image URL becomes <img>, anything else (emoji/text) a <span>.
+   */
   C.icon = function (value, size) {
     var v = String(value || '').trim();
     if (!v) return null;
     size = size || 16;
+    var named = C.svgIcon(v, size);
+    if (named) return named;
     if (C.isImageUrl(v)) {
       return C.h('img', {
         attrs: { src: C.safeUrl(v), alt: '' },
@@ -281,9 +312,173 @@
     return !!C.qs(C.sel.loginRoot);
   };
 
-  /** The viewer's GHL role, if an SSO handshake exposed it. Null means unknown. */
+  /* ------------------------------------------------------------- identity */
+
+  /*
+   * Who is looking at the portal, and which SaaS plan their location is on.
+   * GHL exposes the signed-in user and company through its own AppUtils global,
+   * and its internal API (authorised by the m_a session cookie) returns the
+   * location's SaaS subscription. Everything degrades to "unknown" when those
+   * are unavailable (login page, custom domain without AppUtils, API change).
+   */
+  var identity = { user: null, ghlCompanyId: '', planByLocation: {}, loaded: null };
+  var GHL_API = 'https://backend.leadconnectorhq.com';
+  var GHL_SERVICES_API = 'https://services.leadconnectorhq.com';
+
+  C.getCookie = function (name) {
+    var parts = document.cookie ? document.cookie.split(';') : [];
+    for (var i = 0; i < parts.length; i++) {
+      var idx = parts[i].indexOf('=');
+      if (idx < 0) continue;
+      if (parts[i].slice(0, idx).trim() === name) {
+        try {
+          return decodeURIComponent(parts[i].slice(idx + 1).trim());
+        } catch (e) {
+          return parts[i].slice(idx + 1).trim();
+        }
+      }
+    }
+    return null;
+  };
+
+  /**
+   * GET against GHL's internal API as the signed-in user (opts.services targets the public
+   * services host instead). Resolves null on any failure.
+   */
+  C.ghlFetch = function (path, opts) {
+    var token = C.getCookie('m_a');
+    if (!token) return Promise.resolve(null);
+    return fetch((opts && opts.services ? GHL_SERVICES_API : GHL_API) + path, {
+      method: 'GET',
+      headers: { authorization: 'Bearer ' + token, channel: 'APP', source: 'WEB_USER', version: '2021-07-28' },
+    })
+      .then(function (res) {
+        return res.ok ? res.json() : null;
+      })
+      .catch(function () {
+        return null;
+      });
+  };
+
+  function appUtils() {
+    var a = window.AppUtils;
+    return a && a.Utilities ? a.Utilities : null;
+  }
+
+  function waitFor(test, ms) {
+    return new Promise(function (resolve) {
+      var started = Date.now();
+      (function tick() {
+        var value = test();
+        if (value || Date.now() - started > ms) return resolve(value || null);
+        setTimeout(tick, 150);
+      })();
+    });
+  }
+
+  // role: admin | user; type: agency | account. roleKey matches the permission keys
+  // used by role-gated features: agency_admins, agency_users, account_admins, account_users.
+  function normalizeUser(raw) {
+    if (!raw) return null;
+    var isAdmin = String(raw.role || '').toLowerCase() === 'admin';
+    var isAgency = String(raw.type || '').toLowerCase() === 'agency';
+    return {
+      id: raw.id || '',
+      email: raw.email || '',
+      name: raw.name || [raw.firstName, raw.lastName].filter(Boolean).join(' '),
+      role: isAdmin ? 'admin' : 'user',
+      type: isAgency ? 'agency' : 'account',
+      roleKey: (isAgency ? 'agency' : 'account') + '_' + (isAdmin ? 'admins' : 'users'),
+    };
+  }
+
+  function loadIdentity() {
+    if (identity.loaded) return identity.loaded;
+    // The login page has no signed-in user: don't hold the config request for it.
+    var wait = C.isLoginPage() ? 0 : 3000;
+    identity.loaded = waitFor(appUtils, wait)
+      .then(function (util) {
+        if (!util) return;
+        return Promise.all([
+          Promise.resolve(util.getCurrentUser && util.getCurrentUser()).catch(function () {
+            return null;
+          }),
+          Promise.resolve(util.getCompany && util.getCompany()).catch(function () {
+            return null;
+          }),
+        ]).then(function (res) {
+          identity.user = normalizeUser(res[0]);
+          identity.ghlCompanyId = (res[1] && res[1].id) || '';
+        });
+      })
+      .catch(function () {});
+    return identity.loaded;
+  }
+
+  function loadPlan(locationId) {
+    if (!locationId) return Promise.resolve('');
+    if (Object.prototype.hasOwnProperty.call(identity.planByLocation, locationId)) {
+      return Promise.resolve(identity.planByLocation[locationId]);
+    }
+    var query = identity.ghlCompanyId ? '?companyId=' + encodeURIComponent(identity.ghlCompanyId) : '';
+    return C.ghlFetch('/saas/get-saas-subscription/' + encodeURIComponent(locationId) + query).then(function (res) {
+      var planId = (res && res.data && res.data.saasPlanId) || '';
+      identity.planByLocation[locationId] = planId;
+      return planId;
+    });
+  }
+
+  /** Resolves { user, ghlCompanyId, planId } for a location (bounded wait; never rejects). */
+  C.identify = function (locationId) {
+    return loadIdentity()
+      .then(function () {
+        return loadPlan(locationId);
+      })
+      .then(function (planId) {
+        C.planId = planId || '';
+        return { user: identity.user, ghlCompanyId: identity.ghlCompanyId, planId: C.planId };
+      });
+  };
+
+  C.user = function () {
+    return identity.user;
+  };
+
+  C.planId = '';
+
+  /** The viewer's GHL company ID as GHL reports it (may differ from the install snippet's ID). */
+  C.ghlCompanyId = function () {
+    return identity.ghlCompanyId;
+  };
+
+  /**
+   * Legacy single-value role used by the link role targets: owner = agency admin,
+   * admin = any other admin, user = everyone else. Null means unknown.
+   */
   C.userRole = function () {
-    return window.__customizerUserRole || null;
+    if (window.__customizerUserRole) return window.__customizerUserRole;
+    var u = identity.user;
+    if (!u) return null;
+    if (u.role === 'admin') return u.type === 'agency' ? 'owner' : 'admin';
+    return 'user';
+  };
+
+  /** The viewer's permission key (agency_admins, agency_users, account_admins, account_users) or null. */
+  C.roleKey = function () {
+    return identity.user ? identity.user.roleKey : null;
+  };
+
+  /**
+   * Whether the viewer may see something gated by `perms`, an object keyed by role key
+   * (missing keys count as allowed). With an unknown role, only unrestricted items show.
+   */
+  C.allowedFor = function (perms) {
+    if (!perms || typeof perms !== 'object') return true;
+    var key = C.roleKey();
+    if (key) return perms[key] !== false;
+    return Object.keys(perms).every(function (k) {
+      return perms[k] !== false;
+    });
   };
 
   /* --------------------------------------------------------------- events */
@@ -357,8 +552,13 @@
     '.mgc-anim-shimmer{background-image:linear-gradient(110deg,transparent 30%,rgba(255,255,255,.45) 50%,transparent 70%)!important;background-size:200% 100%!important;animation:mgc-shimmer 2.2s linear infinite}',
     '.mgc-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;font:inherit;font-weight:500;white-space:nowrap;text-decoration:none;box-sizing:border-box;transition:filter .15s ease,transform .15s ease}',
     '.mgc-btn:hover{filter:brightness(1.07)}',
+    '.mgc-btn.mgc-nohover:hover{filter:none}',
     '.mgc-btn:active{transform:translateY(1px)}',
     '.mgc-overlay{position:fixed;inset:0;z-index:2147483000;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;animation:mgc-fade-in .18s ease}',
+    '@keyframes mgc-slide-right{from{transform:translateX(100%)}to{transform:none}}',
+    '@keyframes mgc-slide-left{from{transform:translateX(-100%)}to{transform:none}}',
+    '@keyframes mgc-slide-top{from{transform:translateY(-100%)}to{transform:none}}',
+    '@keyframes mgc-slide-bottom{from{transform:translateY(100%)}to{transform:none}}',
   ].join('\n');
 
   var BUTTON_SIZES = {
@@ -367,9 +567,13 @@
     large: { height: '40px', padding: '0 18px', 'font-size': '16px' },
   };
 
+  var ICON_SIZES = { small: 12, medium: 16, large: 20 };
+
   /**
    * Builds a styled button from the shared button config shape (InjectedButton):
-   * style variant, size, colors, border, radius, shadow, animation, icon, tooltip.
+   * style variant, size, colors, border, radius, shadow, animation, icon, tooltip,
+   * plus the optional extras: iconOnly, iconSize, uppercase, bold, underline,
+   * hoverEffect (false disables the hover lift), gradient/gradientColor, opacity.
    */
   C.button = function (cfg, feature, onClick) {
     var variant = cfg.style || 'default';
@@ -392,11 +596,20 @@
       'box-shadow': C.shadow(cfg.shadow),
       width: cfg.fullWidth ? '100%' : '',
     });
+    if (cfg.gradient && cfg.gradientColor) {
+      style['background'] = 'linear-gradient(135deg,' + (cfg.backgroundColor || base.bg) + ',' + cfg.gradientColor + ')';
+    }
+    if (cfg.opacity != null && cfg.opacity < 100) style.opacity = String(Math.max(0, cfg.opacity) / 100);
+    if (cfg.uppercase) style['text-transform'] = 'uppercase';
+    if (cfg.bold) style['font-weight'] = '700';
+    if (cfg.underline) style['text-decoration'] = 'underline';
 
-    var icon = C.icon(cfg.icon, 16);
-    var label = cfg.label ? C.h('span', { text: cfg.label }) : null;
+    var icon = C.icon(cfg.icon, ICON_SIZES[cfg.iconSize] || 16);
+    var showLabel = cfg.label && !(cfg.iconOnly && icon);
+    var label = showLabel ? C.h('span', { text: cfg.label }) : null;
     var children = cfg.iconPosition === 'right' ? [label, icon] : [icon, label];
     var anim = cfg.animation && cfg.animation !== 'none' ? ' mgc-anim-' + cfg.animation : '';
+    if (cfg.hoverEffect === false) anim += ' mgc-nohover';
 
     var btn = C.h(
       'button',
@@ -533,19 +746,581 @@
   };
 
   /**
-   * Opens a URL the way a customizer link asked for. Relative links stay in the
-   * GHL tab; absolute links default to a new tab.
+   * Small floating menu anchored under (or above, near the bottom edge) an element.
+   * entries: [{ label, onClick }]. Closes on outside click, Escape, or after a pick.
+   * Returns a close function.
    */
-  C.open = function (url, mode, title) {
-    var safe = C.safeUrl(url);
-    if (!safe) return;
-    if (!mode) mode = /^[/#?.]/.test(safe) ? 'same-tab' : 'new-tab';
-    if (mode === 'modal') return C.modal(safe, title);
-    if (mode === 'same-tab') {
-      window.location.href = safe;
-      return;
+  C.popover = function (anchor, entries) {
+    C.removeMarked('popover');
+    var rect = anchor.getBoundingClientRect();
+    var below = window.innerHeight - rect.bottom > 40 + entries.length * 36 || rect.top < 200;
+    var style = {
+      position: 'fixed',
+      'z-index': '2147482990',
+      background: '#fff',
+      'border-radius': '10px',
+      'box-shadow': '0 12px 32px rgba(0,0,0,.2)',
+      padding: '6px',
+      'min-width': Math.max(180, Math.round(rect.width)) + 'px',
+      font: '14px/1.4 system-ui, -apple-system, sans-serif',
+      animation: 'mgc-fade-in .15s ease',
+      left: Math.max(8, Math.min(rect.left, window.innerWidth - 220)) + 'px',
+    };
+    if (below) style.top = rect.bottom + 6 + 'px';
+    else style.bottom = window.innerHeight - rect.top + 6 + 'px';
+
+    function close() {
+      document.removeEventListener('mousedown', onOutside, true);
+      document.removeEventListener('keydown', onKey);
+      C.removeMarked('popover');
     }
-    window.open(safe, '_blank', 'noopener');
+    function onOutside(e) {
+      if (!menu.contains(e.target) && !anchor.contains(e.target)) close();
+    }
+    function onKey(e) {
+      if (e.key === 'Escape') close();
+    }
+
+    var menu = C.mark(
+      C.h(
+        'div',
+        { style: style, attrs: { role: 'menu' } },
+        entries.map(function (entry) {
+          return C.h('button', {
+            text: entry.label,
+            attrs: { type: 'button', role: 'menuitem' },
+            style: {
+              display: 'block',
+              width: '100%',
+              'text-align': 'left',
+              padding: '8px 10px',
+              border: '0',
+              background: 'transparent',
+              'border-radius': '6px',
+              cursor: 'pointer',
+              color: '#111827',
+              font: 'inherit',
+            },
+            on: {
+              mouseenter: function (e) {
+                e.currentTarget.style.background = '#f3f4f6';
+              },
+              mouseleave: function (e) {
+                e.currentTarget.style.background = 'transparent';
+              },
+              click: function () {
+                close();
+                if (entry.onClick) entry.onClick();
+              },
+            },
+          });
+        }),
+      ),
+      'popover',
+    );
+    document.body.appendChild(menu);
+    // Registered on the next tick so the click that opened the menu doesn't close it.
+    setTimeout(function () {
+      document.addEventListener('mousedown', onOutside, true);
+      document.addEventListener('keydown', onKey);
+    }, 0);
+    return close;
+  };
+
+  /**
+   * Side panel iframe that slides in from an edge. opts: { direction: right|left|top|bottom
+   * (default right), percent: 20–100 of the viewport along that axis (default 50),
+   * tabs: [{ label, url }] adds a tab bar that switches the page shown (the first tab is
+   * shown when no url is given), activeIndex: which tab starts selected }.
+   */
+  C.drawer = function (url, title, opts) {
+    opts = opts || {};
+    var tabs = (opts.tabs || []).filter(function (t) {
+      return t && t.label && t.url;
+    });
+    var activeTab = Math.min(Math.max(0, parseInt(opts.activeIndex, 10) || 0), Math.max(0, tabs.length - 1));
+    var safe = C.safeUrl(url || (tabs[activeTab] && tabs[activeTab].url) || '');
+    if (!safe) return;
+    var dir = ['left', 'top', 'bottom'].indexOf(opts.direction) >= 0 ? opts.direction : 'right';
+    var percent = Math.min(100, Math.max(20, parseInt(opts.percent, 10) || 50));
+    var horizontal = dir === 'left' || dir === 'right';
+    C.removeMarked('drawer');
+
+    function close() {
+      document.removeEventListener('keydown', onKey);
+      C.removeMarked('drawer');
+    }
+    function onKey(e) {
+      if (e.key === 'Escape') close();
+    }
+    document.addEventListener('keydown', onKey);
+
+    var panelStyle = {
+      position: 'absolute',
+      background: '#fff',
+      display: 'flex',
+      'flex-direction': 'column',
+      'box-shadow': '0 0 40px rgba(0,0,0,.3)',
+      animation: 'mgc-slide-' + dir + ' .22s ease',
+    };
+    panelStyle[dir] = '0';
+    if (horizontal) {
+      panelStyle.top = '0';
+      panelStyle.bottom = '0';
+      panelStyle.width = 'min(100vw, ' + percent + 'vw)';
+    } else {
+      panelStyle.left = '0';
+      panelStyle.right = '0';
+      panelStyle.height = percent + 'vh';
+    }
+
+    var frame = C.h('iframe', {
+      attrs: { src: safe, title: title || 'Customizer', allow: 'clipboard-write; fullscreen' },
+      style: { border: '0', width: '100%', flex: '1', background: '#fff' },
+    });
+
+    var tabBar = null;
+    if (tabs.length > 1) {
+      var tabButtons = tabs.map(function (tab, index) {
+        var btn = C.h('button', {
+          text: tab.label,
+          attrs: { type: 'button', role: 'tab', 'aria-selected': index === activeTab ? 'true' : 'false' },
+          style: {
+            border: '0',
+            background: 'transparent',
+            padding: '8px 12px',
+            cursor: 'pointer',
+            font: '600 13px/1.2 system-ui, sans-serif',
+            color: index === activeTab ? '#4f46e5' : '#6b7280',
+            'border-bottom': '2px solid ' + (index === activeTab ? '#4f46e5' : 'transparent'),
+          },
+          on: {
+            click: function () {
+              tabButtons.forEach(function (other, i) {
+                var on = i === index;
+                other.setAttribute('aria-selected', on ? 'true' : 'false');
+                other.style.color = on ? '#4f46e5' : '#6b7280';
+                other.style.borderBottom = '2px solid ' + (on ? '#4f46e5' : 'transparent');
+              });
+              // The URL may hold placeholders, so it is resolved when the tab is opened.
+              C.resolveUrl(tab.url).then(function (resolved) {
+                var next = C.safeUrl(resolved);
+                if (next) frame.setAttribute('src', next);
+              });
+            },
+          },
+        });
+        return btn;
+      });
+      tabBar = C.h(
+        'div',
+        {
+          attrs: { role: 'tablist' },
+          style: { display: 'flex', 'flex-wrap': 'wrap', gap: '2px', padding: '0 8px', 'border-bottom': '1px solid #e5e7eb', background: '#fafafa' },
+        },
+        tabButtons,
+      );
+    }
+
+    var panel = C.h(
+      'div',
+      {
+        style: panelStyle,
+        attrs: { role: 'dialog', 'aria-label': title || 'Drawer' },
+        on: {
+          click: function (e) {
+            e.stopPropagation();
+          },
+        },
+      },
+      [
+        C.h(
+          'div',
+          {
+            style: {
+              display: 'flex',
+              'align-items': 'center',
+              'justify-content': 'space-between',
+              padding: '10px 14px',
+              'border-bottom': '1px solid #e5e7eb',
+              font: '600 14px/1.4 system-ui, sans-serif',
+              color: '#111827',
+            },
+          },
+          [
+            C.h('span', { text: title || '' }),
+            C.h('button', {
+              text: '✕',
+              attrs: { type: 'button', 'aria-label': 'Close' },
+              style: { border: '0', background: 'transparent', cursor: 'pointer', 'font-size': '16px', color: '#6b7280' },
+              on: { click: close },
+            }),
+          ],
+        ),
+        tabBar,
+        frame,
+      ],
+    );
+    document.body.appendChild(
+      C.mark(
+        C.h(
+          'div',
+          {
+            style: { position: 'fixed', inset: '0', 'z-index': '2147483000', background: 'rgba(15,23,42,.35)' },
+            on: { click: close },
+          },
+          [panel],
+        ),
+        'drawer',
+      ),
+    );
+  };
+
+  /* --------------------------------------------------------- URL variables */
+
+  /**
+   * Placeholders a link or button URL may contain:
+   *   {{location.id}} {{user.id}} {{user.email}} {{company.id}} {{contact.id}}      (immediate)
+   *   {{contact.firstName}} {{contact.email}} {{contact.custom.<fieldKey>}}          (contact page)
+   *   {{custom_values.<key>}}                                                        (location custom values)
+   * plus the shorthands {loc_id}, {user_id}, {location.id} and {user.id}. Values are URL-encoded; unknown
+   * placeholders become empty. Contact and custom-value data come from GHL's API.
+   */
+  var TOKEN = /\{\{\s*([^{}]+?)\s*\}\}|\{(loc_id|user_id|location\.id|user\.id)\}/g;
+
+  C.contactIdFromUrl = function () {
+    var m = location.pathname.match(/\/contacts\/detail\/([^/?#]+)/);
+    return m ? m[1] : '';
+  };
+
+  function normToken(t) {
+    return String(t || '')
+      .replace(/\s+/g, '')
+      .toLowerCase();
+  }
+
+  function normKey(k) {
+    return normToken(String(k || '').replace(/\{\{|\}\}/g, ''))
+      .replace(/^custom_values\./, '')
+      .replace(/^contact\./, '');
+  }
+
+  /** Appends [name, value] pairs to a URL's query string (before any #hash), URL-encoded. */
+  C.appendQuery = function (url, pairs) {
+    var query = pairs
+      .filter(function (p) {
+        return p[0] !== '' && p[0] != null;
+      })
+      .map(function (p) {
+        return encodeURIComponent(p[0]) + '=' + encodeURIComponent(p[1] == null ? '' : String(p[1]));
+      })
+      .join('&');
+    if (!query) return url;
+    var hash = '';
+    var hashAt = url.indexOf('#');
+    if (hashAt >= 0) {
+      hash = url.slice(hashAt);
+      url = url.slice(0, hashAt);
+    }
+    return url + (url.indexOf('?') >= 0 ? '&' : '?') + query + hash;
+  };
+
+  var CONTACT_FIELDS = ['firstname', 'lastname', 'email', 'phone', 'dateofbirth', 'name', 'companyname'];
+
+  /**
+   * Resolves placeholders in `url`. opts: { sendContact, sendCustomFields } additionally
+   * append the contact's details / custom fields as query parameters (contact page only).
+   * Resolves to the final URL string.
+   */
+  C.resolveUrl = function (url, opts) {
+    opts = opts || {};
+    var raw = String(url || '');
+    var tokens = [];
+    raw.replace(TOKEN, function (m, a, b) {
+      tokens.push(normToken(a || b));
+      return m;
+    });
+
+    var wantsContact =
+      !!(opts.sendContact || opts.sendCustomFields) ||
+      tokens.some(function (t) {
+        return t.indexOf('contact.') === 0 && t !== 'contact.id';
+      });
+    var wantsValues = tokens.some(function (t) {
+      return t.indexOf('custom_values.') === 0;
+    });
+    if (!tokens.length && !wantsContact) return Promise.resolve(raw);
+
+    var locationId = C.locationId || C.locationIdFromUrl();
+    var contactId = C.contactIdFromUrl();
+
+    return loadIdentity().then(function () {
+      var needCustomFields = !!opts.sendCustomFields || tokens.some(function (t) {
+        return t.indexOf('contact.custom.') === 0;
+      });
+      return Promise.all([
+        wantsContact && contactId ? C.ghlFetch('/contacts/' + encodeURIComponent(contactId)) : null,
+        wantsContact && contactId && locationId && needCustomFields
+          ? C.ghlFetch('/locations/' + encodeURIComponent(locationId) + '/customFields')
+          : null,
+        wantsValues && locationId ? C.ghlFetch('/locations/' + encodeURIComponent(locationId) + '/customValues') : null,
+      ]).then(function (res) {
+        var contact = (res[0] && res[0].contact) || {};
+        var fieldDefs = (res[1] && res[1].customFields) || [];
+        var valueList = res[2] && (res[2].customValues || (Array.isArray(res[2]) ? res[2] : []));
+
+        // contact.customFields is [{id, value}]; map ids to their fieldKey ("contact.x" → "x").
+        var custom = {};
+        (contact.customFields || []).forEach(function (f) {
+          var def = fieldDefs.filter(function (d) {
+            return d.id === f.id;
+          })[0];
+          var key = def && def.fieldKey ? normKey(def.fieldKey) : normToken(f.id);
+          custom[key] = f.value;
+        });
+        var values = {};
+        (valueList || []).forEach(function (v) {
+          if (v && v.fieldKey) values[normKey(v.fieldKey)] = v.value;
+        });
+
+        function lookup(token) {
+          if (token === 'location.id' || token === 'loc_id') return locationId;
+          if (token === 'user.id' || token === 'user_id') return identity.user ? identity.user.id : '';
+          if (token === 'user.email') return identity.user ? identity.user.email : '';
+          if (token === 'company.id') return identity.ghlCompanyId;
+          if (token === 'contact.id') return contactId;
+          if (token.indexOf('contact.custom.') === 0) return custom[normKey(token.slice(15))];
+          if (token.indexOf('custom_values.') === 0) return values[normKey(token)];
+          if (token.indexOf('contact.') === 0) {
+            var field = token.slice(8);
+            if (CONTACT_FIELDS.indexOf(field) >= 0) {
+              var prop = Object.keys(contact).filter(function (k) {
+                return k.toLowerCase() === field;
+              })[0];
+              return prop ? contact[prop] : '';
+            }
+            return custom[normKey(field)];
+          }
+          return '';
+        }
+
+        var out = raw.replace(TOKEN, function (m, a, b) {
+          var v = lookup(normToken(a || b));
+          return v == null ? '' : encodeURIComponent(String(v));
+        });
+
+        if (contactId && (opts.sendContact || opts.sendCustomFields)) {
+          var params = [];
+          if (opts.sendContact) {
+            var email = contact.email && String(contact.email).trim();
+            params.push(['firstName', contact.firstName || ''], ['lastName', contact.lastName || '']);
+            params.push(['email', email || ''], ['phone', contact.phone || ''], ['contactId', contactId]);
+            if (contact.dateOfBirth) params.push(['dateOfBirth', contact.dateOfBirth]);
+          }
+          if (opts.sendCustomFields) {
+            Object.keys(custom).forEach(function (k) {
+              params.push([k, custom[k] == null ? '' : custom[k]]);
+            });
+          }
+          out = C.appendQuery(out, params);
+        }
+        return out;
+      });
+    });
+  };
+
+  /**
+   * Opens a URL the way a customizer link asked for. mode: modal | drawer | new-tab |
+   * same-tab (new_tab is accepted too). Relative links default to the GHL tab,
+   * absolute links to a new tab. opts: { title, direction, percent, sendContact,
+   * sendCustomFields } — placeholders in the URL are resolved first (see C.resolveUrl).
+   */
+  C.open = function (url, mode, title, opts) {
+    opts = opts || {};
+    var rawUrl = String(url || '');
+    if (!C.safeUrl(rawUrl.replace(TOKEN, 'x'))) return;
+    mode = mode ? String(mode).replace(/_/g, '-') : '';
+    if (!mode) mode = /^[/#?.]/.test(rawUrl.trim()) ? 'same-tab' : 'new-tab';
+
+    // Open the new tab synchronously so popup blockers allow it, then point it at the resolved URL.
+    var needsLookup = rawUrl.search(TOKEN) >= 0 || !!(opts.sendContact || opts.sendCustomFields);
+    var tab = mode === 'new-tab' && needsLookup ? window.open('about:blank', '_blank') : null;
+
+    return C.resolveUrl(rawUrl, opts).then(function (resolved) {
+      var safe = C.safeUrl(resolved);
+      if (!safe) {
+        if (tab) tab.close();
+        return;
+      }
+      if (mode === 'modal') return C.modal(safe, title);
+      if (mode === 'drawer') return C.drawer(safe, title, opts);
+      if (mode === 'same-tab') {
+        window.location.href = safe;
+        return;
+      }
+      if (tab) {
+        tab.opener = null;
+        tab.location.href = safe;
+      } else {
+        window.open(safe, '_blank', 'noopener');
+      }
+    });
+  };
+
+  /* -------------------------------------------------------------- rating input */
+
+  var EMOJI_RATINGS = [
+    ['😡', 'Very unhappy'],
+    ['🙁', 'Unhappy'],
+    ['😐', 'Neutral'],
+    ['🙂', 'Happy'],
+    ['😍', 'Very happy'],
+  ];
+
+  /**
+   * A rating control: five stars (type "stars"), five faces ("emoji") or the numbers 1 to 10
+   * ("ten"). onChange receives the chosen number; `initial` preselects one (to keep a choice across
+   * a re-render). Returns { el, value() }.
+   */
+  C.ratingWidget = function (type, onChange, accent, initial) {
+    accent = accent || '#4f46e5';
+    var count = type === 'ten' ? 10 : 5;
+    var value = initial > 0 && initial <= count ? initial : 0;
+    var hover = 0;
+    var group = C.h('div', {
+      attrs: { role: 'radiogroup', 'aria-label': 'Rating' },
+      style: { display: 'flex', 'justify-content': 'center', 'flex-wrap': 'wrap', gap: type === 'ten' ? '6px' : '4px' },
+    });
+    var buttons = [];
+
+    function paint() {
+      var shown = hover || value;
+      buttons.forEach(function (btn, i) {
+        var n = i + 1;
+        if (type === 'stars') {
+          btn.style.color = n <= shown ? '#fbbf24' : '#d1d5db';
+        } else if (type === 'emoji') {
+          btn.style.opacity = shown === 0 || n === shown ? '1' : '.35';
+          btn.style.transform = n === shown ? 'scale(1.18)' : 'none';
+        } else {
+          btn.style.background = n === value ? accent : '#fff';
+          btn.style.color = n === value ? '#fff' : '#374151';
+          btn.style.borderColor = n === value ? accent : '#d1d5db';
+        }
+        btn.setAttribute('aria-checked', n === value ? 'true' : 'false');
+      });
+    }
+
+    for (var i = 1; i <= count; i++) {
+      (function (n) {
+        var label = type === 'stars' ? n + (n === 1 ? ' star' : ' stars') : type === 'emoji' ? EMOJI_RATINGS[n - 1][1] : n + ' out of 10';
+        var base = { border: '0', background: 'transparent', cursor: 'pointer', padding: '2px', 'line-height': '1', transition: 'transform .12s ease, opacity .12s ease' };
+        var style =
+          type === 'stars'
+            ? Object.assign(base, { 'font-size': '32px' })
+            : type === 'emoji'
+              ? Object.assign(base, { 'font-size': '30px' })
+              : { width: '32px', height: '34px', border: '1px solid #d1d5db', background: '#fff', 'border-radius': '8px', cursor: 'pointer', font: '600 14px system-ui, sans-serif' };
+        var btn = C.h('button', {
+          text: type === 'stars' ? '★' : type === 'emoji' ? EMOJI_RATINGS[n - 1][0] : String(n),
+          attrs: { type: 'button', role: 'radio', 'aria-label': label, 'aria-checked': 'false', title: label },
+          style: style,
+          on: {
+            click: function () {
+              value = n;
+              paint();
+              if (onChange) onChange(n);
+            },
+            mouseenter: function () {
+              if (type !== 'ten') {
+                hover = n;
+                paint();
+              }
+            },
+            mouseleave: function () {
+              hover = 0;
+              paint();
+            },
+          },
+        });
+        buttons.push(btn);
+        group.appendChild(btn);
+      })(i);
+    }
+    paint();
+    return {
+      el: group,
+      value: function () {
+        return value;
+      },
+    };
+  };
+
+  /* ---------------------------------------------------------------- dragging */
+
+  /**
+   * Lets the user drag `el` (a position:fixed element) around. While dragging it follows the
+   * pointer freely; on release, onDrop(rect) is called with its final bounding rectangle so the
+   * caller can snap it somewhere and remember the spot. A movement under a few pixels is a click,
+   * and the click the browser fires right after a real drag is swallowed. Returns a detach function.
+   */
+  C.makeDraggable = function (el, onDrop) {
+    var start = null;
+    var moved = false;
+    var suppress = false;
+    function onClickCapture(e) {
+      if (suppress) {
+        e.stopImmediatePropagation();
+        e.preventDefault();
+      }
+    }
+    function down(e) {
+      if (e.button !== 0) return;
+      var r = el.getBoundingClientRect();
+      start = { x: e.clientX, y: e.clientY, left: r.left, top: r.top };
+      moved = false;
+      try {
+        if (el.setPointerCapture) el.setPointerCapture(e.pointerId);
+      } catch (err) {
+        /* capture is optional */
+      }
+    }
+    function move(e) {
+      if (!start) return;
+      var dx = e.clientX - start.x;
+      var dy = e.clientY - start.y;
+      if (!moved && Math.sqrt(dx * dx + dy * dy) < 6) return;
+      moved = true;
+      el.style.transform = 'none';
+      el.style.right = 'auto';
+      el.style.bottom = 'auto';
+      el.style.left = start.left + dx + 'px';
+      el.style.top = start.top + dy + 'px';
+    }
+    function up() {
+      if (!start) return;
+      var was = moved;
+      start = null;
+      moved = false;
+      if (!was) return;
+      suppress = true;
+      setTimeout(function () {
+        suppress = false;
+      }, 0);
+      onDrop(el.getBoundingClientRect());
+    }
+    el.addEventListener('click', onClickCapture, true);
+    el.addEventListener('pointerdown', down);
+    el.addEventListener('pointermove', move);
+    el.addEventListener('pointerup', up);
+    el.addEventListener('pointercancel', up);
+    return function () {
+      el.removeEventListener('click', onClickCapture, true);
+      el.removeEventListener('pointerdown', down);
+      el.removeEventListener('pointermove', move);
+      el.removeEventListener('pointerup', up);
+      el.removeEventListener('pointercancel', up);
+    };
   };
 
   /* ----------------------------------------------------- feature registry */
@@ -593,6 +1368,8 @@
   function teardownAll() {
     Object.keys(C.active).forEach(teardownFeature);
     C.removeMarked('modal');
+    C.removeMarked('drawer');
+    C.removeMarked('popover');
   }
 
   /* ------------------------------------------------------------ bootstrap */
@@ -601,18 +1378,28 @@
 
   function load() {
     var seq = ++requestSeq;
-    var url =
-      C.apiBase +
-      '/api/v1/runtime/config?company_id=' +
-      encodeURIComponent(C.companyId) +
-      (C.locationId ? '&locationId=' + encodeURIComponent(C.locationId) : '');
+    var locationId = C.locationId;
 
-    fetch(url, { credentials: 'omit' })
+    // Resolve who the viewer is and which SaaS plan the location is on first, so the
+    // server can pick the right group (plan groups never match without a planId).
+    C.identify(locationId)
+      .then(function (who) {
+        if (seq !== requestSeq) return null;
+        var url =
+          C.apiBase +
+          '/api/v1/runtime/config?company_id=' +
+          encodeURIComponent(C.companyId) +
+          (locationId ? '&locationId=' + encodeURIComponent(locationId) : '') +
+          (who.planId ? '&planId=' + encodeURIComponent(who.planId) : '');
+        return fetch(url, { credentials: 'omit' });
+      })
       .then(function (res) {
+        if (!res) return null;
         if (!res.ok) throw new Error('HTTP ' + res.status);
         return res.json();
       })
       .then(function (data) {
+        if (!data) return;
         if (seq !== requestSeq) return; // a newer location's request superseded this one
         teardownAll();
         C.config = data.features || {};

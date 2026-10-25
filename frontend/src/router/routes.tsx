@@ -21,6 +21,11 @@ const MakeYourOwnThemePage = lazy(() =>
     default: m.MakeYourOwnThemePage,
   })),
 );
+const PremiumThemePage = lazy(() =>
+  import('../pages/customizer/theme-builder/PremiumThemePage').then((m) => ({
+    default: m.PremiumThemePage,
+  })),
+);
 const SpecialThemePage = lazy(() =>
   import('../pages/customizer/special-theme/SpecialThemePage').then((m) => ({
     default: m.SpecialThemePage,
@@ -47,6 +52,14 @@ const DashboardButtonPage = lazy(() =>
 const ContactButtonPage = lazy(() =>
   import('../pages/customizer/button-builder/ContactButtonPage').then((m) => ({
     default: m.ContactButtonPage,
+  })),
+);
+const LaunchpadPage = lazy(() =>
+  import('../pages/customizer/button-builder/LaunchpadPage').then((m) => ({ default: m.LaunchpadPage })),
+);
+const OpportunityTabsPage = lazy(() =>
+  import('../pages/customizer/button-builder/OpportunityTabsPage').then((m) => ({
+    default: m.OpportunityTabsPage,
   })),
 );
 const OpportunityButtonPage = lazy(() =>
@@ -95,9 +108,28 @@ const CustomFieldsPage = lazy(() =>
 const BannersPage = lazy(() =>
   import('../pages/customizer/banners/BannersPage').then((m) => ({ default: m.BannersPage })),
 );
+const HeroBannersPage = lazy(() =>
+  import('../pages/customizer/banners/HeroBannersPage').then((m) => ({ default: m.HeroBannersPage })),
+);
 const ChatBubblePage = lazy(() =>
   import('../pages/customizer/chat-bubble/ChatBubblePage').then((m) => ({
     default: m.ChatBubblePage,
+  })),
+);
+const ChatInboxPage = lazy(() =>
+  import('../pages/customizer/chat-bubble/ChatInboxPage').then((m) => ({ default: m.ChatInboxPage })),
+);
+const ToursPage = lazy(() =>
+  import('../pages/customizer/guides/ToursPage').then((m) => ({ default: m.ToursPage })),
+);
+const FeedbackSettingsPage = lazy(() =>
+  import('../pages/customizer/feedback/FeedbackSettingsPage').then((m) => ({
+    default: m.FeedbackSettingsPage,
+  })),
+);
+const FeedbackResponsesPage = lazy(() =>
+  import('../pages/customizer/feedback/FeedbackResponsesPage').then((m) => ({
+    default: m.FeedbackResponsesPage,
   })),
 );
 const LoaderPage = lazy(() =>
@@ -152,6 +184,7 @@ export const routes: RouteObject[] = [
     children: [
       { path: '/miaghlcustomizer/theme/categories', element: lazyPage(<ThemeCategoriesPage />) },
       { path: '/miaghlcustomizer/theme/occasional', element: lazyPage(<SpecialThemePage />) },
+      { path: '/miaghlcustomizer/theme/premium', element: lazyPage(<PremiumThemePage />) },
       { path: '/miaghlcustomizer/theme/sidebar-styling', element: lazyPage(<SidebarStylingPage />) },
       { path: '/miaghlcustomizer/theme/make-your-own', element: lazyPage(<MakeYourOwnThemePage />) },
       { path: '/miaghlcustomizer/logo', element: lazyPage(<LogoPage />) },
@@ -160,6 +193,8 @@ export const routes: RouteObject[] = [
       { path: '/miaghlcustomizer/buttons/side', element: lazyPage(<FloatingRightButtonPage />) },
       { path: '/miaghlcustomizer/buttons/contact', element: lazyPage(<ContactButtonPage />) },
       { path: '/miaghlcustomizer/buttons/opportunity', element: lazyPage(<OpportunityButtonPage />) },
+      { path: '/miaghlcustomizer/buttons/opportunity-tabs', element: lazyPage(<OpportunityTabsPage />) },
+      { path: '/miaghlcustomizer/buttons/launchpad', element: lazyPage(<LaunchpadPage />) },
       { path: '/miaghlcustomizer/buttons/dashboard', element: lazyPage(<DashboardButtonPage />) },
       { path: '/miaghlcustomizer/buttons/bottom', element: lazyPage(<FloatingBottomButtonPage />) },
       { path: '/miaghlcustomizer/buttons/book-a-call', element: lazyPage(<BookACallPage />) },
@@ -169,7 +204,12 @@ export const routes: RouteObject[] = [
       { path: '/miaghlcustomizer/menu/settings-nav', element: lazyPage(<SettingsNavPage />) },
       { path: '/miaghlcustomizer/custom-fields', element: lazyPage(<CustomFieldsPage />) },
       { path: '/miaghlcustomizer/engagement/chat-manager', element: lazyPage(<ChatBubblePage />) },
+      { path: '/miaghlcustomizer/engagement/inbox', element: lazyPage(<ChatInboxPage />) },
+      { path: '/miaghlcustomizer/engagement/tours', element: lazyPage(<ToursPage />) },
+      { path: '/miaghlcustomizer/engagement/feedback', element: lazyPage(<FeedbackSettingsPage />) },
+      { path: '/miaghlcustomizer/engagement/feedback-responses', element: lazyPage(<FeedbackResponsesPage />) },
       { path: '/miaghlcustomizer/engagement/loader', element: lazyPage(<LoaderPage />) },
+      { path: '/miaghlcustomizer/engagement/hero-banners', element: lazyPage(<HeroBannersPage />) },
       { path: '/miaghlcustomizer/engagement/banners', element: lazyPage(<BannersPage />) },
       {
         path: '/miaghlcustomizer/engagement/conversations',

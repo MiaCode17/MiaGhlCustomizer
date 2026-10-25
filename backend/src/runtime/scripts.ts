@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { env } from '../config/env';
 import { GHL_SELECTORS } from './ghlSelectors';
+import { ICON_LIBRARY } from './icons';
 import { RUNTIME_FEATURES } from './resolve';
 
 /**
@@ -16,8 +17,8 @@ import { RUNTIME_FEATURES } from './resolve';
  */
 export const SCRIPTS_DIR = path.resolve(__dirname, '../../runtime-scripts');
 
-/** Every script-backed feature. `login` has no JSON config; it links /runtime/login-css. */
-export const SCRIPT_FEATURES = [...Object.keys(RUNTIME_FEATURES), 'login'];
+/** Every script-backed feature. `login` and `guide-picker` have no JSON config: login links /runtime/login-css, the picker starts from a URL hash. */
+export const SCRIPT_FEATURES = [...Object.keys(RUNTIME_FEATURES), 'login', 'guide-picker'];
 
 const BOOT_PLACEHOLDER = 'var BOOT = __MGC_BOOT__;';
 
@@ -41,6 +42,7 @@ export function buildEmbedScript(options: {
     companyId: options.companyId,
     apiBase: options.apiBase.replace(/\/+$/, ''),
     selectors: GHL_SELECTORS,
+    icons: ICON_LIBRARY,
   });
   const core = readScript('core').replace(BOOT_PLACEHOLDER, () => `var BOOT = ${boot};`);
   if (core.includes('__MGC_BOOT__')) {

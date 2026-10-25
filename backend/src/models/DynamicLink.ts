@@ -1,6 +1,6 @@
 import { Schema, model, Types } from 'mongoose';
 
-export type DynamicLinkOpenMode = 'same-tab' | 'new-tab' | 'modal';
+export type DynamicLinkOpenMode = 'same-tab' | 'new-tab' | 'modal' | 'drawer';
 export type DynamicLinkRoleTarget = 'all' | 'owner' | 'admin';
 
 export interface DynamicLinkDoc {
@@ -23,7 +23,7 @@ const dynamicLinkSchema = new Schema<DynamicLinkDoc>(
     title: { type: String, required: true, trim: true },
     url: { type: String, required: true, trim: true },
     icon: { type: String },
-    openMode: { type: String, enum: ['same-tab', 'new-tab', 'modal'], default: 'new-tab' },
+    openMode: { type: String, enum: ['same-tab', 'new-tab', 'modal', 'drawer'], default: 'new-tab' },
     roleTarget: { type: String, enum: ['all', 'owner', 'admin'], default: 'all' },
   },
   { timestamps: true },

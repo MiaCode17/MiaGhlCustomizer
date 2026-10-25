@@ -19,13 +19,27 @@ const addonBannerSchema = z.object({
   ctaUrl: z.string().optional(),
 });
 
+const COLOR = z.string().regex(/^#[0-9a-fA-F]{3,8}$/, 'Use a hex color such as #4f46e5');
+
 const membershipSchema = z.object({
   enabled: z.boolean(),
-  allowedLocationIds: z.array(z.string()).default([]),
+  allowedLocationIds: z.array(z.string().trim().min(1)).default([]),
+  buttonLabel: z.string().trim().min(1).max(60).default('Membership'),
+  url: z.string().trim().max(2000).default(''),
+  openMode: z.enum(['modal', 'drawer', 'new-tab']).default('modal'),
+  icon: z.string().max(500).optional(),
+  backgroundColor: COLOR.default('#4f46e5'),
+  textColor: COLOR.default('#ffffff'),
 });
 
 const unreadBadgeSchema = z.object({
   enabled: z.boolean(),
+  badgeColor: COLOR.default('#2563eb'),
+});
+
+const userLinksSchema = z.object({
+  enabled: z.boolean(),
+  maxLinks: z.number().int().min(1).max(30).default(10),
 });
 
 const miscSettingsInputSchema = z.object({
@@ -33,6 +47,7 @@ const miscSettingsInputSchema = z.object({
   addonBanner: addonBannerSchema,
   membership: membershipSchema,
   unreadBadge: unreadBadgeSchema,
+  userLinks: userLinksSchema.default({ enabled: false, maxLinks: 10 }),
 });
 
 function getGroupId(req: { query: { groupId?: unknown } }): string | undefined {

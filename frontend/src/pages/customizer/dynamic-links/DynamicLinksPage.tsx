@@ -10,6 +10,7 @@ const OPEN_MODE_OPTIONS = [
   { value: 'same-tab', label: 'Same tab' },
   { value: 'new-tab', label: 'New tab' },
   { value: 'modal', label: 'Modal' },
+  { value: 'drawer', label: 'Side drawer' },
 ];
 
 const ROLE_TARGET_OPTIONS = [

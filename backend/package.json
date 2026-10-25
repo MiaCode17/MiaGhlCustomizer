@@ -11,7 +11,10 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
     "lint": "eslint src --ext .ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@types/cookie-parser": "^1.4.10",
@@ -26,6 +29,8 @@
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
+    "express-rate-limit": "^8.7.1",
+    "helmet": "^8.3.0",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^8.5.0",
     "morgan": "^1.10.0",
@@ -34,11 +39,16 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@types/supertest": "^7.2.1",
     "@typescript-eslint/eslint-plugin": "^7.16.0",
     "@typescript-eslint/parser": "^7.16.0",
+    "@vitest/coverage-v8": "^2.1.9",
     "eslint": "^8.57.0",
     "eslint-config-prettier": "^9.1.0",
+    "mongodb-memory-server": "^11.3.0",
     "prettier": "^3.3.2",
-    "tsx": "^4.16.2"
+    "supertest": "^7.3.1",
+    "tsx": "^4.16.2",
+    "vitest": "^2.1.9"
   }
 }

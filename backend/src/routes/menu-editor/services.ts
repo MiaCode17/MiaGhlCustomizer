@@ -5,9 +5,12 @@ import { findScoped } from '../../utils/scope';
 export interface MenuEditInput {
   renamed: MenuEditDoc['renamed'];
   hidden: MenuEditDoc['hidden'];
+  hiddenByRole: MenuEditDoc['hiddenByRole'];
+  moved: MenuEditDoc['moved'];
   settingsMenuItems: MenuEditDoc['settingsMenuItems'];
   navTree: MenuEditDoc['navTree'];
   toolCategories: MenuEditDoc['toolCategories'];
+  extendedTabs: MenuEditDoc['extendedTabs'];
 }
 
 export async function getMenuEdit(companyId: Types.ObjectId, groupId?: string) {

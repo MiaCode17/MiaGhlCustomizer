@@ -1,6 +1,6 @@
 import { Schema, model, Types } from 'mongoose';
 
-export type LoginPagePreset = 'split-left' | 'split-right' | 'centered' | 'full-bleed';
+export type LoginPagePreset = 'split-left' | 'split-right' | 'centered' | 'full-bleed' | 'shape-left' | 'shape-right';
 
 export interface CssVariable {
   name: string;
@@ -34,7 +34,7 @@ const loginPageConfigSchema = new Schema<LoginPageConfigDoc>(
     groupId: { type: String, default: '', index: true },
     preset: {
       type: String,
-      enum: ['split-left', 'split-right', 'centered', 'full-bleed'],
+      enum: ['split-left', 'split-right', 'centered', 'full-bleed', 'shape-left', 'shape-right'],
       default: 'centered',
     },
     logoUrl: { type: String },

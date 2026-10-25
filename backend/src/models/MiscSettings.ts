@@ -17,13 +17,30 @@ export interface AddonBannerSettings {
   ctaUrl?: string;
 }
 
+export type MembershipOpenMode = 'modal' | 'drawer' | 'new-tab';
+
 export interface MembershipSettings {
   enabled: boolean;
+  /** Locations that get the button. Empty means every location in scope. */
   allowedLocationIds: string[];
+  buttonLabel: string;
+  /** Where the button leads; may contain {{location.id}}, {{user.email}}, ... placeholders. */
+  url: string;
+  openMode: MembershipOpenMode;
+  icon?: string;
+  backgroundColor: string;
+  textColor: string;
 }
 
 export interface UnreadBadgeSettings {
   enabled: boolean;
+  badgeColor: string;
+}
+
+export interface UserLinksSettings {
+  enabled: boolean;
+  /** How many links one location may keep. */
+  maxLinks: number;
 }
 
 export interface MiscSettingsDoc {
@@ -34,6 +51,7 @@ export interface MiscSettingsDoc {
   addonBanner: AddonBannerSettings;
   membership: MembershipSettings;
   unreadBadge: UnreadBadgeSettings;
+  userLinks: UserLinksSettings;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -66,6 +84,12 @@ const membershipSchema = new Schema<MembershipSettings>(
   {
     enabled: { type: Boolean, default: false },
     allowedLocationIds: { type: [String], default: [] },
+    buttonLabel: { type: String, default: 'Membership' },
+    url: { type: String, default: '' },
+    openMode: { type: String, enum: ['modal', 'drawer', 'new-tab'], default: 'modal' },
+    icon: { type: String },
+    backgroundColor: { type: String, default: '#4f46e5' },
+    textColor: { type: String, default: '#ffffff' },
   },
   { _id: false },
 );
@@ -73,6 +97,15 @@ const membershipSchema = new Schema<MembershipSettings>(
 const unreadBadgeSchema = new Schema<UnreadBadgeSettings>(
   {
     enabled: { type: Boolean, default: true },
+    badgeColor: { type: String, default: '#2563eb' },
+  },
+  { _id: false },
+);
+
+const userLinksSchema = new Schema<UserLinksSettings>(
+  {
+    enabled: { type: Boolean, default: false },
+    maxLinks: { type: Number, default: 10, min: 1, max: 30 },
   },
   { _id: false },
 );
@@ -85,6 +118,7 @@ const miscSettingsSchema = new Schema<MiscSettingsDoc>(
     addonBanner: { type: addonBannerSchema, default: () => ({}) },
     membership: { type: membershipSchema, default: () => ({}) },
     unreadBadge: { type: unreadBadgeSchema, default: () => ({}) },
+    userLinks: { type: userLinksSchema, default: () => ({}) },
   },
   { timestamps: true },
 );

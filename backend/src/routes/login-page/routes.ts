@@ -11,7 +11,7 @@ const cssVariableSchema = z.object({
 });
 
 const loginPageConfigInputSchema = z.object({
-  preset: z.enum(['split-left', 'split-right', 'centered', 'full-bleed']),
+  preset: z.enum(['split-left', 'split-right', 'centered', 'full-bleed', 'shape-left', 'shape-right']),
   logoUrl: z.string().optional(),
   backgroundImageUrl: z.string().optional(),
   cssVariables: z.array(cssVariableSchema).default([]),
