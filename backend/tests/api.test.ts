@@ -122,3 +122,68 @@ describe('tenant isolation', () => {
     expect(aList.body.banners[0].content).toBe('Big sale');
   });
 });
+
+describe('special theme API (custom occasion)', () => {
+  const popup = { visible: true, title: 'Hello', message: 'Happy day', ctaText: '', ctaUrl: '' };
+  const particleEffect = { enabled: true, durationSeconds: 5 };
+  const custom = { name: 'Founders Day', emoji: '🚀', accent: ['#112233', '#ff8800'], particles: ['🚀', '✨'] };
+  const body = { enabled: true, themeKey: 'custom', custom, popup, particleEffect };
+
+  it('requires a session', async () => {
+    expect((await request(app).get('/api/v1/special-theme')).status).toBe(401);
+    expect((await request(app).put('/api/v1/special-theme/update').send(body)).status).toBe(401);
+  });
+
+  it('saves and returns a custom occasion', async () => {
+    const t = await createTenant('Acme');
+    const put = await request(app).put('/api/v1/special-theme/update').set('Cookie', t.cookie).send(body);
+    expect(put.status).toBe(200);
+    expect(put.body.specialTheme.custom).toMatchObject(custom);
+
+    const get = await request(app).get('/api/v1/special-theme').set('Cookie', t.cookie);
+    expect(get.body.specialTheme.themeKey).toBe('custom');
+    expect(get.body.specialTheme.custom.name).toBe('Founders Day');
+  });
+
+  it('still accepts a predefined occasion without a custom block', async () => {
+    const t = await createTenant('Acme');
+    const res = await request(app)
+      .put('/api/v1/special-theme/update')
+      .set('Cookie', t.cookie)
+      .send({ enabled: true, themeKey: 'christmas', popup, particleEffect });
+    expect(res.status).toBe(200);
+  });
+
+  it('rejects colours that are not 6-digit hex (they end up in injected CSS)', async () => {
+    const t = await createTenant('Acme');
+    for (const accent of [['red', '#ff8800'], ['#112233', 'url(javascript:1)'], ['#112233']]) {
+      const res = await request(app)
+        .put('/api/v1/special-theme/update')
+        .set('Cookie', t.cookie)
+        .send({ ...body, custom: { ...custom, accent } });
+      expect(res.status).toBe(400);
+    }
+  });
+
+  it('rejects empty or oversized custom fields', async () => {
+    const t = await createTenant('Acme');
+    const bads = [
+      { ...custom, name: '' },
+      { ...custom, particles: [] },
+      { ...custom, particles: Array(9).fill('✨') },
+      { ...custom, emoji: 'x'.repeat(40) },
+    ];
+    for (const bad of bads) {
+      const res = await request(app).put('/api/v1/special-theme/update').set('Cookie', t.cookie).send({ ...body, custom: bad });
+      expect(res.status).toBe(400);
+    }
+  });
+
+  it('keeps each company’s custom occasion private', async () => {
+    const a = await createTenant('Alpha');
+    const b = await createTenant('Beta');
+    await request(app).put('/api/v1/special-theme/update').set('Cookie', a.cookie).send(body);
+    const bGet = await request(app).get('/api/v1/special-theme').set('Cookie', b.cookie);
+    expect(bGet.body.specialTheme).toBeNull();
+  });
+});

@@ -94,6 +94,9 @@ const resolveSpecialTheme: Resolver = async (companyId, groupId) => {
   return {
     enabled: true,
     themeKey: st.themeKey,
+    ...(st.themeKey === 'custom' && st.custom
+      ? { custom: { name: st.custom.name, emoji: st.custom.emoji, accent: st.custom.accent, particles: st.custom.particles } }
+      : {}),
     popup: {
       visible: st.popup.visible,
       title: st.popup.title,

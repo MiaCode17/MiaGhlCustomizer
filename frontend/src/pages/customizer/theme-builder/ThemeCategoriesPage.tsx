@@ -1,17 +1,27 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Typography, message } from 'antd';
-import { BgColorsOutlined } from '@ant-design/icons';
-import { PageIntro } from '../../../components/PageIntro';
+import { Empty, Input, message } from 'antd';
+import { SearchOutlined } from '@ant-design/icons';
+import { GroupSelector } from '../../../components/GroupSelector';
 import { themeService } from '../../../services/themeService';
 import { Theme, ThemeCategory } from '../../../types/theme';
 import { useBrandTheme } from '../../../context/BrandThemeContext';
-import { withAlpha } from '../../../utils/colorUtils';
 import { DEFAULT_THEME, PRESET_THEMES, THEME_CATEGORIES } from './presetThemes';
-import { ThemeCard } from './ThemeCard';
+import { withAlpha } from '../../../utils/colorUtils';
+import { ThemeCard, ThemePreview, themeSwatches } from './ThemeCard';
 
 type CategoryFilter = ThemeCategory | 'all';
 
-function CategoryPill({
+const PAGE_CSS = `
+.theme-card:hover:not(:disabled) { transform: translateY(-3px); box-shadow: 0 14px 28px rgba(31,25,20,0.12); }
+.theme-card:focus-visible { outline: 2px solid #26201d; outline-offset: 2px; }
+.theme-card .theme-card-apply { opacity: 0; transition: opacity 0.15s ease; }
+.theme-card:hover .theme-card-apply, .theme-card:focus-visible .theme-card-apply { opacity: 1; }
+@media (max-width: 900px) { .theme-hero { grid-template-columns: minmax(0, 1fr) !important; } }
+.theme-chips { scrollbar-width: none; }
+.theme-chips::-webkit-scrollbar { display: none; }
+`;
+
+function Chip({
   label,
   accent,
   active,
@@ -28,42 +38,26 @@ function CategoryPill({
     <button
       type="button"
       onClick={onClick}
+      aria-pressed={active}
       style={{
+        flexShrink: 0,
         display: 'flex',
         alignItems: 'center',
-        gap: 8,
-        padding: '8px 16px',
-        borderRadius: 999,
-        border: active ? `1.5px solid ${accent}` : '1.5px solid #e8e3df',
-        background: active ? withAlpha(accent, 0.1) : '#ffffff',
-        boxShadow: active ? `0 6px 16px ${withAlpha(accent, 0.28)}` : '0 1px 2px rgba(31,25,20,0.04)',
-        cursor: 'pointer',
-        transition: 'transform 0.15s ease, box-shadow 0.2s ease, border-color 0.2s ease, background 0.2s ease',
-        transform: active ? 'translateY(-1px)' : 'translateY(0)',
+        gap: 7,
+        padding: '7px 14px',
+        borderRadius: 10,
+        border: '1px solid transparent',
+        background: active ? '#26201d' : 'transparent',
+        color: active ? '#fff' : '#5a514b',
         fontSize: 13,
-        fontWeight: active ? 600 : 500,
-        color: active ? '#26201d' : '#4b4440',
-      }}
-      onMouseEnter={(e) => {
-        if (!active) e.currentTarget.style.borderColor = accent;
-      }}
-      onMouseLeave={(e) => {
-        if (!active) e.currentTarget.style.borderColor = '#e8e3df';
+        fontWeight: 500,
+        cursor: 'pointer',
+        transition: 'background 0.15s ease, color 0.15s ease',
       }}
     >
-      <span
-        style={{
-          width: 10,
-          height: 10,
-          borderRadius: '50%',
-          background: accent,
-          boxShadow: active ? `0 0 0 3px ${withAlpha(accent, 0.22)}` : 'none',
-          flexShrink: 0,
-          transition: 'box-shadow 0.2s ease',
-        }}
-      />
+      <span style={{ width: 8, height: 8, borderRadius: '50%', background: accent, boxShadow: active ? '0 0 0 2px rgba(255,255,255,0.35)' : 'none' }} />
       {label}
-      <span style={{ opacity: 0.5, fontSize: 12, fontWeight: 500 }}>{count}</span>
+      <span style={{ opacity: 0.55, fontSize: 12 }}>{count}</span>
     </button>
   );
 }
@@ -74,6 +68,7 @@ export function ThemeCategoriesPage() {
   const [loading, setLoading] = useState(true);
   const [applying, setApplying] = useState(false);
   const [activeCategory, setActiveCategory] = useState<CategoryFilter>('all');
+  const [query, setQuery] = useState('');
   const { palette, setActiveTheme } = useBrandTheme();
 
   useEffect(() => {
@@ -100,6 +95,7 @@ export function ThemeCategoriesPage() {
   }, [groupId]);
 
   const applyTheme = async (next: Theme) => {
+    if (applying) return;
     setApplying(true);
     try {
       const saved = await themeService.save(next, groupId);
@@ -120,42 +116,97 @@ export function ThemeCategoriesPage() {
     return map;
   }, []);
 
-  const visible = useMemo(
-    () => (activeCategory === 'all' ? PRESET_THEMES : PRESET_THEMES.filter((t) => t.category === activeCategory)),
-    [activeCategory],
-  );
+  const categoryMeta = useMemo(() => new Map(THEME_CATEGORIES.map((c) => [c.key, c])), []);
 
-  const activeLabel =
-    activeCategory === 'all' ? 'All themes' : THEME_CATEGORIES.find((c) => c.key === activeCategory)?.label;
+  const visible = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return [DEFAULT_THEME, ...PRESET_THEMES].filter((t) => {
+      if (activeCategory !== 'all' && t.category !== activeCategory) return false;
+      if (!q) return true;
+      return `${t.themeName} ${t.description ?? ''} ${t.category ?? ''}`.toLowerCase().includes(q);
+    });
+  }, [activeCategory, query]);
+
+  const keyOf = (t: Theme) => t.id ?? t.themeName;
+  const activeCat = theme.category ? categoryMeta.get(theme.category) : undefined;
+  const heroSwatches = themeSwatches(theme);
 
   return (
-    <div>
-      <PageIntro
-        icon={<BgColorsOutlined />}
-        description="Your entire theme library in one place — filter by aesthetic and apply instantly. Head to Make Your Own to design a fully custom theme."
-        groupId={groupId}
-        onGroupChange={setGroupId}
-      />
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <style>{PAGE_CSS}</style>
 
+      {/* Hero: what's applied right now */}
+      <section
+        style={{
+          borderRadius: 22,
+          padding: 28,
+          background: `linear-gradient(135deg, ${withAlpha(heroSwatches[0], 0.1)}, ${withAlpha(heroSwatches[1] ?? heroSwatches[0], 0.04)} 60%, #fff)`,
+          border: '1px solid #ece7e3',
+          display: 'grid',
+          gridTemplateColumns: 'minmax(0, 1.1fr) minmax(0, 1fr)',
+          gap: 32,
+          alignItems: 'center',
+        }}
+        className="theme-hero"
+      >
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 14 }}>
+            <span style={{ fontSize: 11.5, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: palette.primary }}>
+              Currently applied
+            </span>
+            {activeCat && (
+              <span style={{ fontSize: 12, color: '#6b625b', display: 'flex', alignItems: 'center', gap: 5 }}>
+                <span style={{ width: 7, height: 7, borderRadius: '50%', background: activeCat.accent }} />
+                {activeCat.label}
+              </span>
+            )}
+          </div>
+          <h1 style={{ margin: 0, fontSize: 32, lineHeight: 1.15, fontWeight: 750, color: '#1f1914' }}>
+            {loading ? 'Loading…' : theme.themeName}
+          </h1>
+          <p style={{ margin: '10px 0 18px', maxWidth: 460, fontSize: 14.5, lineHeight: 1.55, color: '#6b625b' }}>
+            {theme.description || 'Pick any theme below to restyle your portal instantly.'}
+          </p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 22 }}>
+            {heroSwatches.map((c, i) => (
+              <span key={i} style={{ width: 28, height: 28, borderRadius: 9, background: c, border: '1px solid rgba(0,0,0,0.08)', boxShadow: '0 2px 6px rgba(0,0,0,0.12)' }} />
+            ))}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#8a817a' }}>
+              <GroupSelector value={groupId} onChange={setGroupId} />
+            </div>
+          </div>
+        </div>
+        <ThemePreview theme={theme} height={210} />
+      </section>
+
+      {/* Toolbar */}
       <div
         style={{
-          borderRadius: 18,
-          border: '1px solid #ede7e2',
-          background: 'linear-gradient(180deg, #ffffff, #fdfbfa)',
-          padding: '20px 24px 28px',
-          boxShadow: '0 1px 2px rgba(31,25,20,0.03), 0 16px 36px rgba(31,25,20,0.05)',
+          position: 'sticky',
+          top: 0,
+          zIndex: 5,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          padding: '10px 12px',
+          borderRadius: 14,
+          background: 'rgba(255,255,255,0.92)',
+          backdropFilter: 'blur(8px)',
+          border: '1px solid #ece7e3',
         }}
       >
-        <div className="flex flex-wrap gap-2" style={{ marginBottom: 18 }}>
-          <CategoryPill
+        <div className="theme-chips" style={{ display: 'flex', gap: 4, overflowX: 'auto', flex: 1, minWidth: 0 }}>
+          <Chip
             label="All"
             accent={palette.primary}
             active={activeCategory === 'all'}
-            count={PRESET_THEMES.length}
+            count={PRESET_THEMES.length + 1}
             onClick={() => setActiveCategory('all')}
           />
           {THEME_CATEGORIES.map((c) => (
-            <CategoryPill
+            <Chip
               key={c.key}
               label={c.label}
               accent={c.accent}
@@ -165,35 +216,37 @@ export function ThemeCategoriesPage() {
             />
           ))}
         </div>
-
-        <div className="flex items-center justify-between" style={{ marginBottom: 14 }}>
-          <Typography.Text type="secondary" style={{ fontSize: 13 }}>
-            {activeLabel} · {visible.length} theme{visible.length === 1 ? '' : 's'}
-          </Typography.Text>
-          {applying && (
-            <Typography.Text type="secondary" style={{ fontSize: 13 }}>
-              Applying theme…
-            </Typography.Text>
-          )}
-        </div>
-
-        <div className="flex flex-wrap gap-3">
-          <ThemeCard
-            key={DEFAULT_THEME.themeName}
-            theme={DEFAULT_THEME}
-            active={(theme.id ?? theme.themeName) === (DEFAULT_THEME.id ?? DEFAULT_THEME.themeName)}
-            onClick={() => applyTheme(DEFAULT_THEME)}
-          />
-          {visible.map((preset) => (
-            <ThemeCard
-              key={preset.id ?? preset.themeName}
-              theme={preset}
-              active={(theme.id ?? theme.themeName) === (preset.id ?? preset.themeName)}
-              onClick={() => applyTheme(preset)}
-            />
-          ))}
-        </div>
+        <Input
+          allowClear
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          prefix={<SearchOutlined style={{ color: '#a39a93' }} />}
+          placeholder="Search themes"
+          style={{ width: 200, flexShrink: 0, borderRadius: 10 }}
+        />
       </div>
+
+      {/* Grid */}
+      {visible.length === 0 ? (
+        <Empty description="No themes match your search" style={{ padding: '48px 0' }} />
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 16, opacity: applying ? 0.75 : 1, transition: 'opacity 0.15s ease' }}>
+          {visible.map((t) => {
+            const cat = t.category ? categoryMeta.get(t.category) : undefined;
+            return (
+              <ThemeCard
+                key={keyOf(t)}
+                theme={t}
+                active={keyOf(theme) === keyOf(t)}
+                categoryLabel={cat?.label}
+                categoryAccent={cat?.accent}
+                disabled={applying}
+                onClick={() => applyTheme(t)}
+              />
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

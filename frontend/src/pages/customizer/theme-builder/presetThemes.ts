@@ -4,20 +4,20 @@ function preset(theme: Omit<Theme, 'enabled' | 'sidebarStyle'> & { sidebarStyle?
   return { ...theme, sidebarStyle: theme.sidebarStyle ?? defaultSidebarStyle, enabled: true };
 }
 
-/** The app's out-of-the-box identity — deep red wine. Picking this resets the customizer back to default. */
+/** The app's out-of-the-box identity — deep Navy with a soft Pink accent on White. Picking this resets the customizer back to default. */
 export const DEFAULT_THEME: Theme = preset({
   themeName: 'Default',
-  description: "Mia GHL's original deep red wine look. Pick this to reset everything back to default.",
+  description: "Mia GHL's original navy and pink look. Pick this to reset everything back to default.",
   isDefault: true,
   colorRules: [
-    { name: 'Header background', selector: '.hl-header', property: 'background-color', value: '#4a0f1a' },
-    { name: 'Sidebar background', selector: '.hl-sidebar', property: 'background-color', value: '#300a11' },
-    { name: 'Primary button', selector: '.hl-btn-primary', property: 'background-color', value: '#7a1f2b' },
-    { name: 'Link color', selector: '.hl-link', property: 'color', value: '#c96b7e' },
+    { name: 'Header background', selector: '.hl-header', property: 'background-color', value: '#16253e' },
+    { name: 'Sidebar background', selector: '.hl-sidebar', property: 'background-color', value: '#0f1b2d' },
+    { name: 'Primary button', selector: '.hl-btn-primary', property: 'background-color', value: '#0f1b2d' },
+    { name: 'Link color', selector: '.hl-link', property: 'color', value: '#e8b1bb' },
   ],
   gradients: [
-    { target: 'header', from: '#4a0f1a', to: '#250509', angle: 180 },
-    { target: 'button', from: '#c96b7e', to: '#7a1f2b', angle: 135 },
+    { target: 'header', from: '#16253e', to: '#09111d', angle: 180 },
+    { target: 'button', from: '#e8b1bb', to: '#0f1b2d', angle: 135 },
   ],
   fonts: { heading: 'Inter', body: 'Inter' },
   borderRadius: '10px',

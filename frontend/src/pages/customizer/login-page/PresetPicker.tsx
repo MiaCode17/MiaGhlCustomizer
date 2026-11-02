@@ -1,4 +1,3 @@
-import { Typography } from 'antd';
 import { LoginPagePreset } from '../../../types/loginPage';
 
 interface PresetOption {
@@ -34,7 +33,7 @@ function PresetDiagram({ preset }: { preset: LoginPagePreset }) {
   if (preset === 'split-left') {
     return (
       <div style={frameStyle}>
-        <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '45%', background: '#1677ff' }} />
+        <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '45%', background: '#4f46e5' }} />
         <div style={{ position: 'absolute', right: '10%', top: '35%', width: '30%', height: '30%', background: '#f0f0f0', borderRadius: 2 }} />
       </div>
     );
@@ -43,7 +42,7 @@ function PresetDiagram({ preset }: { preset: LoginPagePreset }) {
   if (preset === 'split-right') {
     return (
       <div style={frameStyle}>
-        <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: '45%', background: '#1677ff' }} />
+        <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: '45%', background: '#4f46e5' }} />
         <div style={{ position: 'absolute', left: '10%', top: '35%', width: '30%', height: '30%', background: '#f0f0f0', borderRadius: 2 }} />
       </div>
     );
@@ -60,7 +59,7 @@ function PresetDiagram({ preset }: { preset: LoginPagePreset }) {
             bottom: 0,
             [right ? 'right' : 'left']: 0,
             width: '60%',
-            background: '#1677ff',
+            background: '#4f46e5',
             clipPath: right ? 'polygon(100% 0%, 30% 0%, 15% 50%, 30% 100%, 100% 100%)' : 'polygon(0% 0%, 70% 0%, 85% 50%, 70% 100%, 0% 100%)',
           }}
         />
@@ -71,7 +70,7 @@ function PresetDiagram({ preset }: { preset: LoginPagePreset }) {
 
   if (preset === 'full-bleed') {
     return (
-      <div style={{ ...frameStyle, background: '#1677ff' }}>
+      <div style={{ ...frameStyle, background: '#4f46e5' }}>
         <div style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: '36%', height: '46%', background: '#fff', borderRadius: 2 }} />
       </div>
     );
@@ -79,37 +78,38 @@ function PresetDiagram({ preset }: { preset: LoginPagePreset }) {
 
   return (
     <div style={frameStyle}>
-      <div style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: '40%', height: '55%', background: '#1677ff', borderRadius: 2 }} />
+      <div style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: '40%', height: '55%', background: '#4f46e5', borderRadius: 2 }} />
     </div>
   );
 }
 
 export function PresetPicker({ value, onChange }: PresetPickerProps) {
   return (
-    <div className="flex flex-wrap gap-4">
+    <div role="radiogroup" aria-label="Layout preset" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 12 }}>
       {PRESETS.map((preset) => {
         const selected = preset.value === value;
         return (
-          <div
+          <button
             key={preset.value}
+            type="button"
+            role="radio"
+            aria-checked={selected}
             onClick={() => onChange(preset.value)}
             style={{
-              width: 160,
+              textAlign: 'left',
+              font: 'inherit',
               cursor: 'pointer',
               padding: 8,
-              borderRadius: 6,
-              border: selected ? '2px solid #1677ff' : '2px solid transparent',
-              background: selected ? '#e6f4ff' : 'transparent',
+              borderRadius: 14,
+              background: selected ? '#f4f3ff' : '#fff',
+              border: `1.5px solid ${selected ? '#4f46e5' : '#ece7e3'}`,
+              boxShadow: selected ? '0 0 0 3px rgba(79,70,229,0.14)' : 'none',
+              transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
             }}
           >
             <PresetDiagram preset={preset.value} />
-            <Typography.Text
-              style={{ display: 'block', textAlign: 'center', marginTop: 8 }}
-              strong={selected}
-            >
-              {preset.label}
-            </Typography.Text>
-          </div>
+            <div style={{ marginTop: 8, textAlign: 'center', fontSize: 13, fontWeight: selected ? 700 : 500, color: '#1f1914' }}>{preset.label}</div>
+          </button>
         );
       })}
     </div>

@@ -11,9 +11,27 @@ export interface SpecialThemeParticleEffect {
   durationSeconds: number;
 }
 
+/** A user-designed occasion, used when themeKey is 'custom'. */
+export interface CustomOccasion {
+  name: string;
+  emoji: string;
+  accent: [string, string];
+  particles: string[];
+}
+
+export const CUSTOM_OCCASION_KEY = 'custom';
+
+export const DEFAULT_CUSTOM_OCCASION: CustomOccasion = {
+  name: 'My occasion',
+  emoji: '🎉',
+  accent: ['#4f46e5', '#ec4899'],
+  particles: ['🎉', '✨', '🎊'],
+};
+
 export interface SpecialTheme {
   enabled: boolean;
   themeKey: string;
+  custom?: CustomOccasion;
   popup: SpecialThemePopup;
   particleEffect: SpecialThemeParticleEffect;
 }

@@ -18,9 +18,19 @@ const particleEffectSchema = z.object({
   durationSeconds: z.number().min(0),
 });
 
+const hexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/);
+
+const customOccasionSchema = z.object({
+  name: z.string().trim().min(1).max(60),
+  emoji: z.string().trim().min(1).max(16),
+  accent: z.tuple([hexColor, hexColor]),
+  particles: z.array(z.string().trim().min(1).max(16)).min(1).max(8),
+});
+
 const specialThemeInputSchema = z.object({
   enabled: z.boolean(),
   themeKey: z.string(),
+  custom: customOccasionSchema.optional(),
   popup: popupSchema,
   particleEffect: particleEffectSchema,
 });

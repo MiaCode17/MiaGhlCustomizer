@@ -8,7 +8,7 @@ export function BlankLayout() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'linear-gradient(135deg, #4a0f1a 0%, #300a11 55%, #250509 100%)',
+        background: 'linear-gradient(135deg, #16253e 0%, #0f1b2d 55%, #09111d 100%)',
       }}
     >
       <Outlet />

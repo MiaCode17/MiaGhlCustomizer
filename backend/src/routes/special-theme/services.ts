@@ -5,6 +5,7 @@ import { findScoped } from '../../utils/scope';
 export interface SpecialThemeInput {
   enabled: boolean;
   themeKey: string;
+  custom?: SpecialThemeDoc['custom'];
   popup: SpecialThemeDoc['popup'];
   particleEffect: SpecialThemeDoc['particleEffect'];
 }

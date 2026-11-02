@@ -42,6 +42,16 @@
     'mawlid-al-nabi': { particles: ['🌟','🕌','✨'], accent: ['#0a3d24','#e8c468'] },
     'palm-sunday': { particles: ['🌿','🕊️','✨'], accent: ['#1b4d3e','#a8d5ba'] },
   };
+  var HEX = /^#[0-9a-fA-F]{6}$/;
+
+  /** A user-designed occasion (themeKey 'custom'); returns null if it is missing or malformed. */
+  function customOccasion(cfg) {
+    var c = cfg.themeKey === 'custom' && cfg.custom;
+    if (!c || !c.accent || c.accent.length < 2 || !HEX.test(c.accent[0]) || !HEX.test(c.accent[1])) return null;
+    var glyphs = (c.particles || []).filter(function (p) { return typeof p === 'string' && p; }).slice(0, 8);
+    return glyphs.length ? { particles: glyphs, accent: [c.accent[0], c.accent[1]] } : null;
+  }
+
   var FALLBACK = { particles: ['✨'], accent: ['#4f46e5', '#7c3aed'] };
 
   var CSS = [
@@ -151,7 +161,7 @@
 
   C.register('special-theme', {
     apply: function (cfg) {
-      var occasion = OCCASIONS[cfg.themeKey] || FALLBACK;
+      var occasion = customOccasion(cfg) || OCCASIONS[cfg.themeKey] || FALLBACK;
       var timer = null;
       C.style('special-theme', CSS);
 

@@ -208,17 +208,17 @@ export function DefaultLayout() {
             </Typography.Text>
           </div>
           <div style={{ lineHeight: 1.25, flex: 1, minWidth: 0 }}>
-            <Typography.Text style={{ color: '#ffffff', fontWeight: 600, fontSize: 15, display: 'block' }}>
+            <Typography.Text style={{ color: 'var(--sider-title)', fontWeight: 600, fontSize: 15, display: 'block' }}>
               Mia GHL
             </Typography.Text>
             <Space size={6} align="center">
-              <Typography.Text style={{ color: 'rgba(255,255,255,0.55)', fontSize: 12 }}>
+              <Typography.Text style={{ color: 'var(--sider-muted)', fontSize: 12 }}>
                 Customizer
               </Typography.Text>
               <Tooltip title="Chrome follows your active theme's color">
                 <span
                   className="app-brand-pulse"
-                  style={{ background: `var(--brand-accent, ${palette.accent})` }}
+                  style={{ background: 'var(--sider-title)' }}
                 />
               </Tooltip>
             </Space>
@@ -250,12 +250,12 @@ export function DefaultLayout() {
             </Avatar>
             <div style={{ minWidth: 0, flex: 1 }}>
               <Typography.Text
-                style={{ color: 'rgba(255,255,255,0.85)', fontSize: 13, display: 'block' }}
+                style={{ color: 'var(--sider-title)', fontSize: 13, display: 'block' }}
                 ellipsis
               >
                 {user.email}
               </Typography.Text>
-              <Typography.Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 11 }}>
+              <Typography.Text style={{ color: 'var(--sider-muted)', fontSize: 11 }}>
                 Signed in
               </Typography.Text>
             </div>

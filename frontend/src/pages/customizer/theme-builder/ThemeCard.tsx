@@ -1,14 +1,7 @@
-import { useState } from 'react';
-import { Tag, Typography } from 'antd';
+import { CheckCircleFilled } from '@ant-design/icons';
 import { Theme } from '../../../types/theme';
 import { useBrandTheme } from '../../../context/BrandThemeContext';
 import { withAlpha } from '../../../utils/colorUtils';
-
-interface ThemeCardProps {
-  theme: Theme;
-  active: boolean;
-  onClick: () => void;
-}
 
 function lighten(hex: string, amount: number): string {
   const clean = hex.replace('#', '');
@@ -20,139 +13,178 @@ function lighten(hex: string, amount: number): string {
   return `#${[mix(r), mix(g), mix(b)].map((v) => v.toString(16).padStart(2, '0')).join('')}`;
 }
 
-function Chip({ color, size }: { color: string; size: number }) {
+function gradientCss(g: { from: string; to: string; angle: number }): string {
+  return `linear-gradient(${g.angle}deg, ${g.from}, ${g.to})`;
+}
+
+/** Pulls a small, display-ready set of colours out of a theme. */
+export function themeSwatches(theme: Theme): string[] {
+  const header = theme.gradients.find((g) => g.target === 'header');
+  const main = theme.colorRules[0]?.value ?? header?.from ?? '#c9c2ba';
+  const fromRules = theme.colorRules.map((r) => r.value).filter(Boolean);
+  const out = [...fromRules];
+  if (header) out.unshift(header.from, header.to);
+  while (out.length < 5) out.push(lighten(main, 0.3 + out.length * 0.12));
+  return Array.from(new Set(out)).slice(0, 5);
+}
+
+/** Miniature GHL-style screen (sidebar, header, content) painted with the theme's colours. */
+export function ThemePreview({ theme, height = 150 }: { theme: Theme; height?: number }) {
+  const header = theme.gradients.find((g) => g.target === 'header');
+  const sidebar = theme.gradients.find((g) => g.target === 'sidebar');
+  const button = theme.gradients.find((g) => g.target === 'button');
+  const [c0, c1, c2] = themeSwatches(theme);
+  const headerBg = header ? gradientCss(header) : c0;
+  const sidebarBg = sidebar ? gradientCss(sidebar) : (header ? gradientCss(header) : c0);
+  const buttonBg = button ? gradientCss(button) : (c1 ?? c0);
+  const radius = Math.min(parseInt(theme.borderRadius, 10) || 8, 14);
+
   return (
     <div
+      aria-hidden
       style={{
-        width: size,
-        height: size,
-        borderRadius: size / 3.5,
-        background: color,
+        display: 'flex',
+        height,
+        borderRadius: 12,
+        overflow: 'hidden',
+        background: '#f6f5f4',
         border: '1px solid rgba(0,0,0,0.06)',
-        boxShadow: '0 1px 2px rgba(0,0,0,0.15)',
-        flexShrink: 0,
       }}
-    />
+    >
+      <div style={{ width: '22%', background: sidebarBg, padding: '10px 7px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <div style={{ height: 8, width: '60%', borderRadius: 4, background: 'rgba(255,255,255,0.85)' }} />
+        {[0.55, 0.3, 0.3, 0.3].map((o, i) => (
+          <div key={i} style={{ height: 6, borderRadius: 3, background: `rgba(255,255,255,${o})` }} />
+        ))}
+      </div>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+        <div style={{ height: '20%', background: headerBg, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '0 8px', gap: 5 }}>
+          <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'rgba(255,255,255,0.8)' }} />
+          <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'rgba(255,255,255,0.5)' }} />
+        </div>
+        <div style={{ flex: 1, padding: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div style={{ display: 'flex', gap: 6 }}>
+            {[c0, c1, c2].map((c, i) => (
+              <div key={i} style={{ flex: 1, height: 26, borderRadius: radius / 2, background: withAlpha(c, 0.18), borderLeft: `3px solid ${c}` }} />
+            ))}
+          </div>
+          <div style={{ flex: 1, borderRadius: radius / 2, background: '#fff', boxShadow: '0 1px 2px rgba(0,0,0,0.06)', padding: 7, display: 'flex', flexDirection: 'column', gap: 5 }}>
+            <div style={{ height: 5, width: '70%', borderRadius: 3, background: '#e6e2de' }} />
+            <div style={{ height: 5, width: '45%', borderRadius: 3, background: '#eeebe8' }} />
+            <div style={{ marginTop: 'auto', height: 14, width: 44, borderRadius: radius / 2, background: buttonBg }} />
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
-export function ThemeCard({ theme, active, onClick }: ThemeCardProps) {
-  const [hovered, setHovered] = useState(false);
+interface ThemeCardProps {
+  theme: Theme;
+  active: boolean;
+  categoryLabel?: string;
+  categoryAccent?: string;
+  disabled?: boolean;
+  onClick: () => void;
+}
+
+export function ThemeCard({ theme, active, categoryLabel, categoryAccent, disabled, onClick }: ThemeCardProps) {
   const { palette } = useBrandTheme();
-
-  const headerGradient = theme.gradients.find((g) => g.target === 'header');
-  const mainColor = theme.colorRules[0]?.value ?? headerGradient?.from ?? '#c9c2ba';
-  const mainBackground = headerGradient
-    ? `linear-gradient(${headerGradient.angle}deg, ${headerGradient.from}, ${headerGradient.to})`
-    : mainColor;
-
-  const sideChips = [theme.colorRules[1]?.value ?? lighten(mainColor, 0.25), theme.colorRules[2]?.value ?? lighten(mainColor, 0.45)];
-  const bottomChips = [
-    theme.colorRules[3]?.value ?? lighten(mainColor, 0.6),
-    lighten(mainColor, 0.75),
-    lighten(mainColor, 0.87),
-  ];
-
-  const lifted = hovered || active;
+  const swatches = themeSwatches(theme);
 
   return (
-    <div
-      role="button"
-      tabIndex={0}
+    <button
+      type="button"
       onClick={onClick}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') onClick();
-      }}
+      disabled={disabled}
+      aria-pressed={active}
+      className="theme-card"
       style={{
-        width: 280,
-        cursor: 'pointer',
-        borderRadius: 18,
-        border: active ? `2px solid ${palette.primary}` : '1px solid #e5e7eb',
+        textAlign: 'left',
+        font: 'inherit',
+        cursor: disabled ? 'progress' : 'pointer',
+        borderRadius: 16,
+        padding: 12,
         background: '#fff',
-        padding: 20,
-        transform: lifted ? 'translateY(-4px)' : 'translateY(0)',
-        boxShadow: active
-          ? `0 5px 0 0 ${palette.tintBorder}, 0 ${lifted ? 18 : 12}px 24px ${withAlpha(palette.primary, 0.22)}`
-          : `0 4px 0 0 #e5e1dc, 0 ${lifted ? 14 : 6}px 18px rgba(31,25,20,0.12)`,
-        transition: 'transform 0.18s ease, box-shadow 0.18s ease, border-color 0.15s ease',
+        border: `1.5px solid ${active ? palette.primary : '#ece7e3'}`,
+        boxShadow: active ? `0 0 0 4px ${withAlpha(palette.primary, 0.14)}` : '0 1px 2px rgba(31,25,20,0.04)',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 12,
+        position: 'relative',
+        transition: 'transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease',
       }}
     >
-      <div
-        style={{
-          position: 'relative',
-          height: 208,
-          background: '#f4f2f0',
-          borderRadius: 16,
-          boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.08)',
-        }}
-      >
-        <div
+      <ThemePreview theme={theme} />
+
+      {active && (
+        <span
           style={{
             position: 'absolute',
-            inset: 0,
-            borderRadius: 16,
-            background: mainBackground,
-            boxShadow: 'inset 0 2px 4px rgba(255,255,255,0.35), inset 0 -10px 16px rgba(0,0,0,0.18)',
-            WebkitMaskImage: 'radial-gradient(circle 50px at 100% 100%, transparent 99%, black 100%)',
-            maskImage: 'radial-gradient(circle 50px at 100% 100%, transparent 99%, black 100%)',
-          }}
-        />
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            borderRadius: 16,
-            background: 'linear-gradient(160deg, rgba(255,255,255,0.35), rgba(255,255,255,0) 45%)',
-            WebkitMaskImage: 'radial-gradient(circle 50px at 100% 100%, transparent 99%, black 100%)',
-            maskImage: 'radial-gradient(circle 50px at 100% 100%, transparent 99%, black 100%)',
-            pointerEvents: 'none',
-          }}
-        />
-        {theme.isCustom && (
-          <Tag color={palette.primary} style={{ position: 'absolute', top: 12, left: 12, marginRight: 0, fontSize: 12 }}>
-            Yours
-          </Tag>
-        )}
-        {theme.isDefault && (
-          <Tag style={{ position: 'absolute', top: 12, left: 12, marginRight: 0, fontSize: 12 }}>Default</Tag>
-        )}
-        <div
-          style={{
-            position: 'absolute',
-            right: 10,
-            bottom: 56,
+            top: 20,
+            right: 20,
             display: 'flex',
-            flexDirection: 'column',
-            gap: 7,
+            alignItems: 'center',
+            gap: 5,
+            padding: '3px 9px 3px 7px',
+            borderRadius: 999,
+            fontSize: 11,
+            fontWeight: 600,
+            background: '#fff',
+            color: palette.primary,
+            boxShadow: '0 2px 8px rgba(0,0,0,0.18)',
           }}
         >
-          {sideChips.map((c, i) => (
-            <Chip key={i} color={c} size={36} />
-          ))}
-        </div>
-        <div style={{ position: 'absolute', left: 10, bottom: 10, display: 'flex', gap: 7 }}>
-          {bottomChips.map((c, i) => (
-            <Chip key={i} color={c} size={26} />
-          ))}
-        </div>
-      </div>
+          <CheckCircleFilled /> Applied
+        </span>
+      )}
 
-      <div style={{ paddingTop: 14 }}>
-        <Typography.Text strong style={{ fontSize: 16, display: 'block' }}>
-          {theme.themeName}
-        </Typography.Text>
-        {theme.description && (
-          <Typography.Paragraph
-            type="secondary"
-            style={{ fontSize: 13, marginTop: 4, marginBottom: 0 }}
-            ellipsis={{ rows: 2 }}
-          >
-            {theme.description}
-          </Typography.Paragraph>
-        )}
+      <div style={{ padding: '0 4px 4px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+          <span style={{ fontSize: 15, fontWeight: 650, color: '#26201d' }}>{theme.themeName}</span>
+          <span style={{ display: 'flex', gap: 3 }}>
+            {swatches.map((c, i) => (
+              <span key={i} style={{ width: 14, height: 14, borderRadius: '50%', background: c, border: '1px solid rgba(0,0,0,0.1)', marginLeft: i ? -5 : 0 }} />
+            ))}
+          </span>
+        </div>
+        <div
+          style={{
+            marginTop: 4,
+            fontSize: 12.5,
+            lineHeight: 1.45,
+            color: '#8a817a',
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+            minHeight: 36,
+          }}
+        >
+          {theme.description || 'A polished look for your whole portal.'}
+        </div>
+        <div style={{ marginTop: 8, display: 'flex', gap: 6, alignItems: 'center', fontSize: 11.5, fontWeight: 500 }}>
+          {theme.isDefault && <Badge>Default</Badge>}
+          {theme.isCustom && <Badge>Yours</Badge>}
+          {categoryLabel && (
+            <span style={{ display: 'flex', alignItems: 'center', gap: 5, color: '#6b625b' }}>
+              <span style={{ width: 7, height: 7, borderRadius: '50%', background: categoryAccent }} />
+              {categoryLabel}
+            </span>
+          )}
+          <span className="theme-card-apply" style={{ marginLeft: 'auto', color: palette.primary, fontWeight: 600 }}>
+            {active ? '' : 'Apply →'}
+          </span>
+        </div>
       </div>
-    </div>
+    </button>
+  );
+}
+
+function Badge({ children }: { children: string }) {
+  return (
+    <span style={{ padding: '1px 8px', borderRadius: 999, background: '#f1ede9', color: '#4b4440', fontSize: 11 }}>
+      {children}
+    </span>
   );
 }

@@ -38,6 +38,17 @@ const CSS_VAR_MAP: Record<keyof BrandPalette, string> = {
   accent: '--brand-accent',
   accentSoft: '--brand-accent-soft',
   onPrimary: '--brand-on-primary',
+  sidebarTitle: '--sider-title',
+  sidebarText: '--sider-text',
+  sidebarTextHover: '--sider-text-hover',
+  sidebarMuted: '--sider-muted',
+  sidebarSelectedText: '--sider-selected-text',
+  sidebarSubBg: '--sider-sub-bg',
+  sidebarSurface: '--sider-surface',
+  sidebarBorder: '--sider-border',
+  sidebarDivider: '--sider-divider',
+  sidebarIconHover: '--sider-icon-hover',
+  sidebarDots: '--sider-dots',
 };
 
 interface BrandThemeContextValue {

@@ -1,4 +1,5 @@
-export const DEFAULT_BRAND_COLOR = '#7a1f2b';
+export const DEFAULT_BRAND_COLOR = '#0f1b2d';
+const DEFAULT_ACCENT_COLOR = '#e8b1bb';
 
 export function isValidHex(hex: string | undefined | null): hex is string {
   return !!hex && /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(hex);
@@ -116,6 +117,18 @@ export interface BrandPalette {
   accentSoft: string;
   /** Text color that reads well on top of `primary`. */
   onPrimary: string;
+  /** Sidebar chrome colors. Dark sidebars use light text; the default brand uses a light sidebar. */
+  sidebarTitle: string;
+  sidebarText: string;
+  sidebarTextHover: string;
+  sidebarMuted: string;
+  sidebarSelectedText: string;
+  sidebarSubBg: string;
+  sidebarSurface: string;
+  sidebarBorder: string;
+  sidebarDivider: string;
+  sidebarIconHover: string;
+  sidebarDots: string;
 }
 
 export function buildBrandPalette(hexInput: string): BrandPalette {
@@ -123,23 +136,55 @@ export function buildBrandPalette(hexInput: string): BrandPalette {
   const [h, rawS, rawL] = hexToHsl(hex);
   const s = clamp(rawS, 35, 90);
   const primary = hslToHex(h, s, clamp(rawL, 28, 46));
+  const isDefault = hex.toLowerCase() === DEFAULT_BRAND_COLOR;
+  const accent = isDefault ? DEFAULT_ACCENT_COLOR : hslToHex(h + 35, clamp(s + 10, 45, 90), 66);
 
-  return {
-    primary,
-    primaryHover: hslToHex(h, s, clamp(rawL + 8, 12, 62)),
-    primaryActive: hslToHex(h, s, clamp(rawL - 8, 6, 55)),
+  const derived: BrandPalette = {
     gradientTop: hslToHex(h, s, 19),
     gradientMid: hslToHex(h, s, 12),
     gradientBottom: hslToHex(h, clamp(s - 15, 20, 90), 7),
     menuSelectedBg: hslToHex(h, s, 24),
     menuHoverBg: withAlpha(hslToHex(h, s, 60), 0.1),
+    sidebarTitle: '#ffffff',
+    sidebarText: 'rgba(255,255,255,0.72)',
+    sidebarTextHover: '#ffffff',
+    sidebarMuted: 'rgba(255,255,255,0.55)',
+    sidebarSelectedText: '#ffffff',
+    sidebarSubBg: 'rgba(0,0,0,0.22)',
+    sidebarSurface: 'rgba(255,255,255,0.06)',
+    sidebarBorder: 'rgba(255,255,255,0.08)',
+    sidebarDivider: withAlpha(accent, 0.55),
+    sidebarIconHover: accent,
+    sidebarDots: 'rgba(255,255,255,0.05)',
+    primary,
+    primaryHover: hslToHex(h, s, clamp(rawL + 8, 12, 62)),
+    primaryActive: hslToHex(h, s, clamp(rawL - 8, 6, 55)),
     tintBg: hslToHex(h, Math.min(s, 55), 97),
     tintBorder: hslToHex(h, Math.min(s, 55), 90),
     whisper: withAlpha(primary, 0.08),
     softShadow: withAlpha(primary, 0.16),
     glow: withAlpha(primary, 0.35),
-    accent: hslToHex(h + 35, clamp(s + 10, 45, 90), 66),
-    accentSoft: withAlpha(hslToHex(h + 35, clamp(s + 10, 45, 90), 66), 0.55),
-    onPrimary: rawL > 68 ? '#1f0a0d' : '#ffffff',
+    accent,
+    accentSoft: withAlpha(accent, 0.55),
+    onPrimary: rawL > 68 ? '#0f172a' : '#ffffff',
+  };
+
+  // The default Navy is darker than the generator's lightness floor, so it is specified exactly.
+  if (!isDefault) return derived;
+  return {
+    ...derived,
+    primary: DEFAULT_BRAND_COLOR,
+    primaryHover: '#1f3354',
+    primaryActive: '#0a1320',
+    gradientTop: '#16253e',
+    gradientMid: DEFAULT_BRAND_COLOR,
+    gradientBottom: '#09111d',
+    menuSelectedBg: '#1d3050',
+    menuHoverBg: withAlpha(DEFAULT_ACCENT_COLOR, 0.1),
+    tintBg: '#f7f7f9',
+    tintBorder: '#e3e6ec',
+    whisper: withAlpha(DEFAULT_BRAND_COLOR, 0.06),
+    softShadow: withAlpha(DEFAULT_BRAND_COLOR, 0.14),
+    glow: withAlpha(DEFAULT_BRAND_COLOR, 0.3),
   };
 }
